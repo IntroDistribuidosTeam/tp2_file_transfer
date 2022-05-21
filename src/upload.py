@@ -23,6 +23,14 @@ def send_first_msg(client, file_name, addr):
     #return data.decode()
     return 1
 
+def read_file(file, file_len):
+    end = 0
+    line = file.read(PAYLOAD_SIZE - 2)
+    if file.tell() == file_len :
+        end = 1
+    msg = str(end) + '/'
+    return msg + line
+
 def upload_file(client, addr, file_src, file_name , logger):
     if not os.path.exists(file_src):
         logger.error(f"The file {file_src} does not exist")
@@ -38,24 +46,15 @@ def upload_file(client, addr, file_src, file_name , logger):
         ack = send_first_msg(client, file_name, addr)
 
     # envio resto mensajes
-    end = 1
-    line = file.read(PAYLOAD_SIZE - 2)
-    if file.tell() == file_len :
-        end = 0
-    msg = str(end) + '/'
-    while line != '':
+    msg_send = read_file(file, file_len)
+
+    while len(msg_send) != 2:
         ack = 0
-        msg_send = msg + line
-        print(msg_send)
         while ack == 0 :
             client.sendto(msg_send.encode(), addr)
             ack = wait_ack_loop(client)
         ## mensaje llego bien mando otro
-        end = 1
-        line = file.read(PAYLOAD_SIZE - 2)
-        if file.tell() == file_len :
-            end = 0
-        msg = str(end) + '/'
+        msg_send = read_file(file, file_len)
 
     logger.info("File uploaded")
     file.close()
