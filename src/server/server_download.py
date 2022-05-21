@@ -1,4 +1,5 @@
 
+from email.policy import default
 import logging
 import socket
 from urllib import response
@@ -48,7 +49,8 @@ def make_response(payload:str,end_of_file:bool):
     
     return response.encode()
 
-
+def default_response():
+    return "0".encode()
 
 def is_nack(payload):
     if len(payload) > ACK or int(payload) != NACK:
@@ -63,12 +65,13 @@ def download(udp_socket: socket, file_name):
     last_seek_send = 0
     end_of_file = False
     eof_ack = False
+    last_response = default_response()
 
     while not end_of_file and not eof_ack:
 
         (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
         payload = bytes_read.decode()
-
+        
       
         if is_ack(payload):
 
@@ -78,17 +81,32 @@ def download(udp_socket: socket, file_name):
             else:
 
                 logging.info("ACK recieved from {}".format(address))
-
-                
+    
                 data,last_seek_send,end_of_file = file_data(last_seek_send, file_name, end_of_file)
 
-                #TODO make_response
+                
                 response = make_response(data, end_of_file)
-                udp_socket.sendtp(response,address)
+                last_response = response
+                res = udp_socket.sendto(response,address)
+                
+                if res != BUFF_SIZE :
+                    logging.info("Cound not sent all bytes")
+                    last_seek_send -= res
+                else:
+                    logging.info("PACKET sent to {}".format(address))
 
+        
         elif is_nack(payload):
+
             logging.info("NACK recieved from {}".format(address))
-            #TODO terminar el nack
+            res = udp_socket.sendto(last_response,address)
+
+            if res != BUFF_SIZE :
+                logging.info("Cound not sent all bytes")
+                last_seek_send -= res
+            else:
+                logging.info("PACKET sent to {}".format(address))
+            
 
 
 print(int(True))
