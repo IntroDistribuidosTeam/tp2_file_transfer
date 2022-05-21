@@ -53,6 +53,17 @@ class ServerDownloadTest(unittest.TestCase):
 
         self.assertTrue(eof)
 
+    def test_08_end_of_file_is_true(self):
+        p = "Hola esto es un texto de prueba donde se testeara y sabremos si anda bien\nbla bla bla bla hola"
+        response = make_response(p,True)
+        eof = int(response.decode().split(",")[0])
+        self.assertTrue(eof)
+    
+    def test_09_end_of_file_is_false(self):
+        p = "Hola esto es un texto de prueba donde se testeara y sabremos si anda bien\nbla bla bla bla hola"
+        response = make_response(p,True)
+        eof = int(response.decode().split(",")[0])
+        self.assertTrue(eof)
 
 if __name__ == '__main__':
     unittest.main()
