@@ -1,10 +1,11 @@
 
 import logging
 import socket
+from urllib import response
 
 
 BUFF_SIZE = 1024
-FILE_SIZE = 1022
+FILE_SIZE = 1023
 ACK = 1
 NACK = 0
 
@@ -39,6 +40,16 @@ def file_data(last_seek_send: int, file_name: str, end_of_file: bool):
         logging.error("Exception: {}".format(e))
 
 
+#NOTE Mirar lo del checksum
+def make_response(payload:str,end_of_file:bool):
+
+    eof = 1 if end_of_file else 0
+    response = str(eof) + "," + payload
+    
+    return response.encode()
+
+
+
 def is_nack(payload):
     if len(payload) > ACK or int(payload) != NACK:
         return False
@@ -58,7 +69,7 @@ def download(udp_socket: socket, file_name):
         (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
         payload = bytes_read.decode()
 
-        # Primero me fijo si es ACK
+      
         if is_ack(payload):
 
             if end_of_file:
@@ -68,13 +79,16 @@ def download(udp_socket: socket, file_name):
 
                 logging.info("ACK recieved from {}".format(address))
 
-                # encerrar esto en un try/catch
+                
                 data,last_seek_send,end_of_file = file_data(last_seek_send, file_name, end_of_file)
 
                 #TODO make_response
-                response = make_response(data, cheksum)
-                udp_socket.send(response.encode())
+                response = make_response(data, end_of_file)
+                udp_socket.sendtp(response,address)
 
         elif is_nack(payload):
             logging.info("NACK recieved from {}".format(address))
             #TODO terminar el nack
+
+
+print(int(True))
