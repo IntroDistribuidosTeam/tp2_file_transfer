@@ -13,15 +13,13 @@ def wait_ack_loop(client):
         if len(data) == 1:
             wait = False
     return data
-      
-def send_first_msg(client, file_name, addr):  
+
+def send_first_msg(client, file_name, addr):
     msg = 'u' + '/' + file_name
-    print(msg)
     client.sendto(msg.encode(), addr)
-    ## espero ack
-    #data = wait_ack_loop(client)
-    #return data.decode()
-    return 1
+    # espero ack
+    data = wait_ack_loop(client)
+    return data.decode()
 
 def read_file(file, file_len):
     end = 0
@@ -47,7 +45,6 @@ def upload_file(client, addr, file_src, file_name , logger):
 
     # envio resto mensajes
     msg_send = read_file(file, file_len)
-
     while len(msg_send) != 2:
         ack = 0
         while ack == 0 :
