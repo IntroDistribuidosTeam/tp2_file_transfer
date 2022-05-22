@@ -15,6 +15,19 @@ def set_up_logger():
     LOG_FORMAT = "%(asctime)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
+def start_new_connection(address):
+
+    s = socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('localhost',)) # asi me da un port nuevo cualquiera
+     
+    ack_package = str(1).encode()
+    res = s.sendto(address)
+
+    while res != ACK:
+        s.sendto(ack_package,address)
+    
+    return s
+
 
 def is_ack(payload):
 
@@ -59,8 +72,9 @@ def is_nack(payload):
     return True
 
 
-def download(udp_socket: socket, file_name):
+def download(file_name,address):
     set_up_logger()
+    udp_socket = start_new_connection(address)
 
     last_seek_send = 0
     end_of_file = False
