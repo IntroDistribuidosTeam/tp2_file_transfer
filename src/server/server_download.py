@@ -20,13 +20,14 @@ def start_new_connection(address):
 
     s = socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('localhost',))  # asi me da un port nuevo cualquiera
+    logging.info("New socket listing at: {}".format(s.getsocketname()))
 
     ack_package = str(1).encode()
     res = s.sendto(address)
 
     while res != ACK:
+        logging.error("Coudn't sent ACK to: {} ".format(address))
         s.sendto(ack_package, address)
-
     return s
 
 
@@ -53,6 +54,8 @@ def file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 
     except FileNotFoundError as e:
         logging.error("Exception: {}".format(e))
+        str(e),0,False
+        
 
 
 # NOTE Mirar lo del checksum
