@@ -65,5 +65,10 @@ class ServerDownloadTest(unittest.TestCase):
         eof = int(response.decode().split(",")[0])
         self.assertTrue(eof)
 
+    def test_10_default_response_is_nack(self):
+        response = default_response()
+
+        self.assertTrue(is_nack(response))
+
 if __name__ == '__main__':
     unittest.main()
