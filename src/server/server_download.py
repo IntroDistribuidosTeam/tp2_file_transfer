@@ -15,17 +15,18 @@ def set_up_logger():
     LOG_FORMAT = "%(asctime)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
+
 def start_new_connection(address):
 
     s = socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('localhost',)) # asi me da un port nuevo cualquiera
-     
+    s.bind(('localhost',))  # asi me da un port nuevo cualquiera
+
     ack_package = str(1).encode()
     res = s.sendto(address)
 
     while res != ACK:
-        s.sendto(ack_package,address)
-    
+        s.sendto(ack_package, address)
+
     return s
 
 
@@ -54,16 +55,18 @@ def file_data(last_seek_send: int, file_name: str, end_of_file: bool):
         logging.error("Exception: {}".format(e))
 
 
-#NOTE Mirar lo del checksum
-def make_response(payload:str,end_of_file:bool):
+# NOTE Mirar lo del checksum
+def make_response(payload: str, end_of_file: bool):
 
     eof = 1 if end_of_file else 0
     response = str(eof) + "," + payload
-    
+
     return response.encode()
+
 
 def default_response():
     return "0".encode()
+
 
 def is_nack(payload):
     if len(payload) > ACK or int(payload) != NACK:
@@ -72,7 +75,7 @@ def is_nack(payload):
     return True
 
 
-def download(file_name,address):
+def download(file_name, address):
     set_up_logger()
     udp_socket = start_new_connection(address)
 
@@ -85,8 +88,7 @@ def download(file_name,address):
 
         (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
         payload = bytes_read.decode()
-        
-      
+
         if is_ack(payload):
 
             if end_of_file:
@@ -95,32 +97,27 @@ def download(file_name,address):
             else:
 
                 logging.info("ACK recieved from {}".format(address))
-    
-                data,last_seek_send,end_of_file = file_data(last_seek_send, file_name, end_of_file)
 
-                
+                data, last_seek_send, end_of_file = file_data(
+                    last_seek_send, file_name, end_of_file)
+
                 response = make_response(data, end_of_file)
                 last_response = response
-                res = udp_socket.sendto(response,address)
-                
-                if res != BUFF_SIZE :
+                res = udp_socket.sendto(response, address)
+
+                if res != BUFF_SIZE:
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
                     logging.info("PACKET sent to {}".format(address))
 
-        
         elif is_nack(payload):
 
             logging.info("NACK recieved from {}".format(address))
-            res = udp_socket.sendto(last_response,address)
+            res = udp_socket.sendto(last_response, address)
 
-            if res != BUFF_SIZE :
+            if res != BUFF_SIZE:
                 logging.info("Cound not sent all bytes")
                 last_seek_send -= res
             else:
                 logging.info("PACKET sent to {}".format(address))
-            
-
-
-print(int(True))
