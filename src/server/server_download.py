@@ -33,13 +33,13 @@ def start_new_connection(address):
 
 def is_ack(payload):
 
-    if len(payload) > ACK or int(payload) != ACK:
+    if int(payload) != ACK:
         return False
 
     return True
 
 
-def file_data(last_seek_send: int, file_name: str, end_of_file: bool):
+def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
     try:
         with open(file_name, "r", encoding="utf-8") as file:
             # Muevo hasta el seek donde termine la ultima vez
@@ -68,11 +68,11 @@ def make_response(payload: str, end_of_file: bool):
 
 
 def default_response():
-    return "0".encode()
+    return "0"
 
 
 def is_nack(payload):
-    if len(payload) > ACK or int(payload) != NACK:
+    if int(payload) != NACK:
         return False
 
     return True
@@ -101,14 +101,14 @@ def download(file_name, address):
 
                 logging.info("ACK recieved from {}".format(address))
 
-                data, last_seek_send, end_of_file = file_data(
+                data, last_seek_send, end_of_file = get_file_data(
                     last_seek_send, file_name, end_of_file)
 
                 response = make_response(data, end_of_file)
                 last_response = response
                 res = udp_socket.sendto(response, address)
 
-                if res != BUFF_SIZE:
+                if res != len(response):
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
@@ -119,7 +119,7 @@ def download(file_name, address):
             logging.info("NACK recieved from {}".format(address))
             res = udp_socket.sendto(last_response, address)
 
-            if res != BUFF_SIZE:
+            if res != len(last_response):
                 logging.info("Cound not sent all bytes")
                 last_seek_send -= res
             else:

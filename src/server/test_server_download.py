@@ -30,7 +30,7 @@ class ServerDownloadTest(unittest.TestCase):
         eof = True
         expected = 94 
         
-        p,seek,eof = file_data(seek,file,eof)
+        p,seek,eof = get_file_data(seek,file,eof)
 
         self.assertEquals(expected,len(p))
 
@@ -40,7 +40,7 @@ class ServerDownloadTest(unittest.TestCase):
         eof = True
         expected = 94 
         
-        p,seek,eof = file_data(seek,file,eof)
+        p,seek,eof = get_file_data(seek,file,eof)
 
         self.assertEquals(expected,seek)
 
@@ -49,7 +49,7 @@ class ServerDownloadTest(unittest.TestCase):
         seek = 0
         eof = False # end of file
         
-        p,seek,eof = file_data(seek,file,eof)
+        p,seek,eof = get_file_data(seek,file,eof)
 
         self.assertTrue(eof)
 
