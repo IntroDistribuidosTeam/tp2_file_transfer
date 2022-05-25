@@ -1,4 +1,4 @@
-TIMEOUT=1
+TIMEOUT = 1
 BUFF_SIZE = 1024
 FILE_SIZE = 1023
 ACK = 1
@@ -9,3 +9,8 @@ ACTION_POS = 0
 FILENAME_POS = 1
 DONWLOAD_CODE = 'D'
 UPLOAD_CODE = 'U'
+EOF = 1
+NOT_EOF = 0
+MODE_WRITE = "w"
+MODE_ADD = "a"
+LOG_FORMAT = "%(asctime)s - %(message)s"

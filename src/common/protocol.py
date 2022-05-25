@@ -1,5 +1,6 @@
 import logging
-from constants import DELIMETER,UPLOAD_CODE,ACTION_POS,DONWLOAD_CODE,FILENAME_POS
+from common.constants import DELIMETER,UPLOAD_CODE,ACTION_POS,DONWLOAD_CODE,FILENAME_POS,LOG_FORMAT
+
 
 
 def parse_request(msg):
@@ -15,3 +16,9 @@ def parse_request(msg):
     request['filename'] = data[FILENAME_POS]
 
     return request
+
+
+
+
+def set_up_logger():
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
