@@ -7,28 +7,23 @@ EOF = 1
 NOT_EOF = 0
 MODE_WRITE = "w"
 MODE_ADD = "a"
+DOWNLOAD = 'd'
+DELIMITER = '/'
 
 def write_piece(file_name, mode, piece, count_pieces, logger):
     try: 
         with open(file_name, mode) as file:
             file.write(piece)
-            logger.info("Success: Piece {} of the file downloaded".fotmat(count_pieces))
+            logger.info("Piece {} downloaded".fotmat(count_pieces))
     except Exception:
-        logger.error("Error: Could not write the piece {} of the file".fotmat(count_pieces))    
-
-def get_piece(payload):
-    piece = []
-    for i in range(0, len(payload)):
-        if i > 1:
-            piece.append(payload[i])
-    return "".join(piece)
+        logger.error("Error: Piece {} could not be downloaded".fotmat(count_pieces))    
 
 def recv_piece(payload, count_pieces):
     if payload[0] == EOF:
         return EOF, NACK, ""
     else:
         count_pieces += 1
-        return NOT_EOF, ACK, get_piece(payload)
+        return NOT_EOF, ACK, payload[2:]
 
 # Falta implementar la parte del Checksum 
 def are_corrupted(bytes):
@@ -46,10 +41,10 @@ def send_message(client_socket, msg, addr, logger):
         bytes_recibed, addr = client_socket.recvfrom(BUFF_SIZE)
         return bytes_recibed.decode()
     else: 
-        logger.error("Error: Could not send all the bytes of the message: {}".format(msg))
+        logger.error("Error: Could not send message: {}".format(msg))
 
 def download_file(client, file_name, addr, logger):
-    request = 'd' + '/' + file_name
+    request = DOWNLOAD + DELIMITER + file_name
     ack = send_message(client, request, addr)
     
     while ack == NACK:
@@ -61,11 +56,12 @@ def download_file(client, file_name, addr, logger):
     while eof == NOT_EOF:
         payload = send_message(client, ACK, addr)
         eof, response, piece = recv_piece(payload, piece, count_pieces, response)
+        
         if count_pieces == 1:
             write_piece(file_name, MODE_WRITE, piece, count_pieces, logger)
-        else: 
-            write_piece(file_name, MODE_ADD, piece, count_pieces, logger)
+        write_piece(file_name, MODE_ADD, piece, count_pieces, logger)
 
+    logger.info("File {} downloaded")
     client.close()
 
 
