@@ -1,6 +1,5 @@
 import logging
-
-
+from constants import DELIMETER,UPLOAD_CODE,ACTION_POS,DONWLOAD_CODE,FILENAME_POS
 
 
 def parse_request(msg):
@@ -10,7 +9,7 @@ def parse_request(msg):
         logging.error('Wrong data format')
         raise Exception
     if data[ACTION_POS] not in [UPLOAD_CODE, DONWLOAD_CODE]:
-        logging.error(f'Command should be {UPLOAD_CODE} or {DONWLOAD_CODE}')
+        logging.error("Command should be %s  or %s",UPLOAD_CODE,DONWLOAD_CODE)
         raise Exception
     request['command'] = data[ACTION_POS]
     request['filename'] = data[FILENAME_POS]
