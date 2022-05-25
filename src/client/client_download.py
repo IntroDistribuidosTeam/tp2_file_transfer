@@ -1,73 +1,78 @@
+from logging import *
+import logging
 from socket import *
+from common.constants import BUFF_SIZE, ACK, NACK, EOF, NOT_EOF, MODE_WRITE, MODE_ADD, DONWLOAD_CODE, DELIMETER
+from common.protocol import set_up_logger
 
-BUFF_SIZE = 1024
-ACK = 1
-NACK = 0
-EOF = 1
-NOT_EOF = 0
-MODE_WRITE = "w"
-MODE_ADD = "a"
 
-def write_piece(file_name, mode, piece, count_pieces, logger):
-    try: 
-        with open(file_name, mode) as file:
-            file.write(piece)
-            logger.info("Success: Piece {} of the file downloaded".fotmat(count_pieces))
-    except Exception:
-        logger.error("Error: Could not write the piece {} of the file".fotmat(count_pieces))    
+def send_request(client, file_name, addr: tuple):
+    request = DONWLOAD_CODE + DELIMETER + file_name
+    ack, addr = send_message(client, request, addr)
 
-def get_piece(payload):
-    piece = []
-    for i in range(0, len(payload)):
-        if i > 1:
-            piece.append(payload[i])
-    return "".join(piece)
-
-def recv_piece(payload, count_pieces):
-    if payload[0] == EOF:
-        return EOF, NACK, ""
-    else:
-        count_pieces += 1
-        return NOT_EOF, ACK, get_piece(payload)
-
-# Falta implementar la parte del Checksum 
-def are_corrupted(bytes):
-    return False
-
-def recv_first_piece(client_socket, pieces_received, count_pieces, response):
-    bytes_recibed, addr = client_socket.recvfrom(BUFF_SIZE)
-    if are_corrupted(bytes_recibed):
-        response = NACK
-    return recv_piece(bytes_recibed.decode(), pieces_received, count_pieces, response)
-
-def send_message(client_socket, msg, addr, logger):
-    bytes_sended = client_socket.sendto(msg.encode(),addr)
-    if bytes_sended == len(msg):
-        bytes_recibed, addr = client_socket.recvfrom(BUFF_SIZE)
-        return bytes_recibed.decode()
-    else: 
-        logger.error("Error: Could not send all the bytes of the message: {}".format(msg))
-
-def download_file(client, file_name, addr, logger):
-    request = 'd' + '/' + file_name
-    ack = send_message(client, request, addr)
-    
     while ack == NACK:
-        ack = send_message(client, request, addr)
-        
+        ack, addr = send_message(client, request, addr)
+
+def write_piece(file_name, mode, piece):
+    try:
+        with open(file_name, mode) as file:
+            s = file.write(piece)
+            print("escribio: %i bytes", s)
+    except FileNotFoundError as error:
+
+        logging.error("Error: Could not write in file")
+
+
+def send_message(client_socket, msg, addr: tuple):
+    bytes_sended = client_socket.sendto(msg.encode(), addr)
+    if bytes_sended == len(msg):
+
+        bytes_recibed, addr = client_socket.recvfrom(BUFF_SIZE)
+        return bytes_recibed.decode(), addr
+
+    else:
+        logging.error("Error: Could not send all the bytes of the message: %s", msg)
+
+def get_payload(bytes_read):
+
+    payload = bytes_read.decode()
+    eof = EOF if int(payload[0]) == EOF else NOT_EOF
+    
+    print(eof)
+    return eof,payload[2:]
+
+
+
+def send_ack(client, addr):
+    bytes_sent = client.sendto(str(ACK).encode(), addr)
+
+    while bytes_sent != ACK:
+        bytes_sent = client.sendto(str(ACK).encode(), addr)
+
+
+def download_file(client, file_name, path, addr: tuple):
+    set_up_logger()
+
+    send_request(client, file_name, addr)
+
     count_pieces = 0
-    eof, response, piece = recv_first_piece(client, piece, count_pieces, response)
+    bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
+    eof, payload = get_payload(bytes_recibed)
+
+    write_piece(path, MODE_WRITE, payload)
+    logging.info("Success: Piece %s of the file downloaded", count_pieces)
+    count_pieces += 1
 
     while eof == NOT_EOF:
-        payload = send_message(client, ACK, addr)
-        eof, response, piece = recv_piece(payload, piece, count_pieces, response)
-        if count_pieces == 1:
-            write_piece(file_name, MODE_WRITE, piece, count_pieces, logger)
-        else: 
-            write_piece(file_name, MODE_ADD, piece, count_pieces, logger)
+        
 
-    client.close()
+        send_ack(client, addr)
+        bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
 
+        eof, payload = get_payload(bytes_recibed)
+        write_piece(path, MODE_ADD,payload)
+        logging.info("Success: Piece %s of the file downloaded", count_pieces)
 
     
+    send_ack(client, addr)
 
+    client.close()
