@@ -8,14 +8,13 @@ NOT_EOF = 0
 MODE_WRITE = "w"
 MODE_ADD = "a"
 
-def write_piece(file_name, format, piece, count_pieces, logger):
+def write_piece(file_name, mode, piece, count_pieces, logger):
     try: 
-        with open(file_name, format) as file:
+        with open(file_name, mode) as file:
             file.write(piece)
             logger.info("Success: Piece {} of the file downloaded".fotmat(count_pieces))
     except Exception:
-        logger.error("Error: Could not write the piece {} of the file".fotmat(count_pieces))
-        
+        logger.error("Error: Could not write the piece {} of the file".fotmat(count_pieces))    
 
 def get_piece(payload):
     piece = []
