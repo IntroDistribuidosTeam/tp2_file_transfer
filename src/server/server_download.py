@@ -1,6 +1,6 @@
 import socket
 import logging
-from ..common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK
+from common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK, DELIMETER
 LOG_FORMAT = "%(asctime)s - %(message)s"
 
 
@@ -46,7 +46,7 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 
     except FileNotFoundError as file_not_found_e:
         logging.error("Exception: %s ",file_not_found_e)
-        return str(file_not_found_e), 0, False
+        return str(file_not_found_e), 0, True
 
 
 # NOTE Mirar lo del checksum
@@ -54,7 +54,7 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 def make_response(payload: str, end_of_file: bool):
 
     eof = 1 if end_of_file else 0
-    response = str(eof) + "/" + payload
+    response = str(eof) + DELIMETER + payload
 
     return response.encode()
 
@@ -63,8 +63,10 @@ def default_response():
     return "0"
 
 
+
+
 def is_nack(payload):
-    if int(payload) != NACK:
+    if (payload) != NACK:
         return False
 
     return True
@@ -78,17 +80,27 @@ def download(file_name, address):
     end_of_file = False
     eof_ack = False
     last_response = default_response()
+    
+    #FIXME -> refactorizar esto
+    data, last_seek_send, end_of_file = get_file_data(last_seek_send, file_name, end_of_file)
 
-    while not end_of_file and not eof_ack:
+    response = make_response(data, end_of_file)
+    last_response = response
+    res = udp_socket.sendto(response, address)
+
+      
+    while not end_of_file or not eof_ack:
 
         (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
         payload = bytes_read.decode()
 
         if is_ack(payload):
-
+            
+            
             if end_of_file:
                 logging.info("Last ACK recieved from %s",address)
                 eof_ack = True
+                
             else:
 
                 logging.info("ACK recieved from %s",address)

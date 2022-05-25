@@ -1,10 +1,13 @@
 import logging
 from common.parser import parse_server_arguments
-from server import start_server
+import server.server as server
 
 def main():
     args = parse_server_arguments()
     addr = (args.own_host, args.own_port)
+
+    print("args passed: host: %s port: %s",args.own_host, args.own_port)
+
     if args.verbose:
         log_level = logging.DEBUG
     else:
@@ -14,7 +17,7 @@ def main():
 
     print(args)
 
-    start_server(addr,args.storage_dir)
+    server.start_server(addr,args.storage_dir)
 
 if __name__ == "__main__":
     main()
