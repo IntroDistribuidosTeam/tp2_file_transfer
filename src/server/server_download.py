@@ -58,7 +58,7 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 def make_response(payload: str, end_of_file: bool):
 
     eof = 1 if end_of_file else 0
-    response = str(eof) + "," + payload
+    response = str(eof) + "/" + payload
 
     return response.encode()
 
