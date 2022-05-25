@@ -1,6 +1,7 @@
 import logging
 from common.parser import parse_server_arguments
-
+from server import *
+from server.server import start_server
 
 def main():
     args = parse_server_arguments()
@@ -16,7 +17,7 @@ def main():
 
     print(args)
 
-    # RUN CLIENT
+    start_server(addr,args.storage_dir)
 
 if __name__ == "__main__":
     main()

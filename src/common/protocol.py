@@ -1,10 +1,6 @@
 import logging
 
-DELIMETER = ';'
-ACTION_POS = 0
-FILENAME_POS = 1
-DONWLOAD_CODE = 'D'
-UPLOAD_CODE = 'U'
+
 
 
 def parse_request(msg):
@@ -20,5 +16,3 @@ def parse_request(msg):
     request['filename'] = data[FILENAME_POS]
 
     return request
-
-

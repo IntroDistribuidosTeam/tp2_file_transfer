@@ -1,11 +1,6 @@
 import logging
 import socket
-
-
-BUFF_SIZE = 1024
-FILE_SIZE = 1023
-ACK = 1
-NACK = 0
+from constants import *
 
 
 def set_up_logger():
@@ -120,3 +115,6 @@ def download(file_name, address):
                 last_seek_send -= res
             else:
                 logging.info("PACKET sent to {}".format(address))
+
+    logging.info("Download finished.")
+    udp_socket.close()
