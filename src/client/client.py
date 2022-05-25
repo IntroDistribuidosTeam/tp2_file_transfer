@@ -14,7 +14,7 @@ def main():
     skt.sendto(message.encode(), addr)
 
     data, server_addr = skt.recvfrom(SIZE)
-    print(f'Msg: {data.decode()} | from: {server_addr}')
+    print('Msg: {data.decode()} | from: {server_addr}')
 
 if __name__ == "__main__":
     main()
