@@ -1,26 +1,26 @@
-import logging
 import socket
-from constants import *
+import logging
+from ..common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK
+LOG_FORMAT = "%(asctime)s - %(message)s"
 
 
 def set_up_logger():
-    LOG_FORMAT = "%(asctime)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
 
-def start_new_connection(address):
+def start_new_connection(address:tuple):
 
-    s = socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('localhost',))  # asi me da un port nuevo cualquiera
-    logging.info("New socket listing at: {}".format(s.getsocketname()))
+    initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    initial_socket.bind(('localhost',0))
+    logging.info("New socket listing at: %s",initial_socket.getsockname())
 
     ack_package = str(1).encode()
-    res = s.sendto(address)
+    res = initial_socket.sendto(ack_package,address)
 
     while res != ACK:
-        logging.error("Coudn't sent ACK to: {} ".format(address))
-        s.sendto(ack_package, address)
-    return s
+        logging.error("Coudn't sent ACK to: %s ",address)
+        initial_socket.sendto(ack_package, address)
+    return initial_socket
 
 
 def is_ack(payload):
@@ -44,12 +44,13 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 
             return file_payload, last_seek_send, end_of_file
 
-    except FileNotFoundError as e:
-        logging.error("Exception: {}".format(e))
-        str(e), 0, False
+    except FileNotFoundError as file_not_found_e:
+        logging.error("Exception: %s ",file_not_found_e)
+        return str(file_not_found_e), 0, False
 
 
 # NOTE Mirar lo del checksum
+
 def make_response(payload: str, end_of_file: bool):
 
     eof = 1 if end_of_file else 0
@@ -86,11 +87,11 @@ def download(file_name, address):
         if is_ack(payload):
 
             if end_of_file:
-                logging.info("Last ACK recieved from {}".format(address))
+                logging.info("Last ACK recieved from %s",address)
                 eof_ack = True
             else:
 
-                logging.info("ACK recieved from {}".format(address))
+                logging.info("ACK recieved from %s",address)
 
                 data, last_seek_send, end_of_file = get_file_data(
                     last_seek_send, file_name, end_of_file)
@@ -103,18 +104,21 @@ def download(file_name, address):
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
-                    logging.info("PACKET sent to {}".format(address))
+                    logging.info("PACKET sent to %s",address)
 
         elif is_nack(payload):
 
-            logging.info("NACK recieved from {}".format(address))
+            logging.info("NACK recieved from %s",address)
             res = udp_socket.sendto(last_response, address)
 
             if res != len(last_response):
                 logging.info("Cound not sent all bytes")
                 last_seek_send -= res
             else:
-                logging.info("PACKET sent to {}".format(address))
+                logging.info("PACKET sent to %s",address)
 
     logging.info("Download finished.")
     udp_socket.close()
+
+if __name__ == "__main__":
+    print("anda")
