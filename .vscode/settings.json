@@ -6,10 +6,11 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./test",
+        "./src/server",
         "-p",
-        "test*.py"
+        "test_*.py"
     ],
     "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true
+    "python.testing.unittestEnabled": true,
+    "python.analysis.extraPaths": []
 }
