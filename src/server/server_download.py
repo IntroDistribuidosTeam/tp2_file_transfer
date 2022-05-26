@@ -12,7 +12,7 @@ def set_up_logger():
 def start_new_connection(address:tuple):
 
     initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    initial_socket.settimeout(TIMEOUT)
+    initial_socket.settimeout(10)
     initial_socket.bind(('localhost',0))
     logging.info("New socket listing at: %s",initial_socket.getsockname())
 
@@ -22,6 +22,8 @@ def start_new_connection(address:tuple):
     while res != ACK:
         logging.error("Coudn't sent ACK to: %s ",address)
         initial_socket.sendto(ack_package, address)
+
+    print("Se inicializó bien")
     return initial_socket
 
 def is_error(payload):
@@ -62,7 +64,9 @@ def read_from_socket(udp_socket):
             (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
             payload = bytes_read.decode()
             max_timeouts = MAX_NACK
+            print("leyo bien")
         except TimeoutError as _:
+            print("salta el timeout %i ",max_timeouts)
             max_timeouts += 1
             payload = ERROR
             address = (str(ERROR),str(ERROR))
@@ -80,7 +84,8 @@ def make_response(payload: str, end_of_file: bool):
 
 def make_package(last_seek_send, file_name, end_of_file):
     data, last_seek_send, end_of_file = get_file_data(last_seek_send, file_name, end_of_file)
-    return make_response(data, end_of_file)
+    payload = make_response(data, end_of_file)
+    return payload,last_seek_send,end_of_file
 
 
 def send_package(udp_socket,response,address):
@@ -89,6 +94,7 @@ def send_package(udp_socket,response,address):
         try:
             res = udp_socket.sendto(response, address)
             max_timeouts = MAX_NACK
+            print("se envio bien!")
         except TimeoutError as _:
             max_timeouts += 1
             res = -1
@@ -124,7 +130,7 @@ def download(file_name, address):
     
 
     
-    response = make_package(last_seek_send, file_name, end_of_file)
+    response,last_seek_send,end_of_file = make_package(last_seek_send, file_name, end_of_file)
     res = send_package(udp_socket,response,address)
     last_response = response
       
@@ -139,11 +145,15 @@ def download(file_name, address):
             eof_ack = True
         elif is_ack(payload):
                 
+            print("LLEGO un ACK")
             if end_of_file:
                 logging.info("Last ACK recieved from %s",address)
                 eof_ack = True
+                print("LLEGO ultimo ACK")
             else:
                 logging.info("ACK recieved from %s",address)
+                
+                response,last_seek_send,end_of_file = make_package(last_seek_send, file_name, end_of_file)
                 res = send_package(udp_socket,last_response,address)
 
                 if res == ERROR: 
@@ -156,5 +166,6 @@ def download(file_name, address):
                     logging.info("PACKET re-sent to %s",address)
             
 
+    print("Cerrando socket con cliente.")
     udp_socket.close()
     logging.info("Socket closed.")
