@@ -1,6 +1,6 @@
 import socket
 import logging
-from common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK, DELIMETER
+from common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK,DELIMETER, TIMEOUT, MAX_NACK
 LOG_FORMAT = "%(asctime)s - %(message)s"
 
 
@@ -11,6 +11,7 @@ def set_up_logger():
 def start_new_connection(address:tuple):
 
     initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    initial_socket.settimeout(TIMEOUT)
     initial_socket.bind(('localhost',0))
     logging.info("New socket listing at: %s",initial_socket.getsockname())
 
@@ -76,6 +77,7 @@ def download(file_name, address):
     set_up_logger()
     udp_socket = start_new_connection(address)
 
+    nack_counter = 0
     last_seek_send = 0
     end_of_file = False
     eof_ack = False
@@ -89,48 +91,45 @@ def download(file_name, address):
     res = udp_socket.sendto(response, address)
 
       
-    while not end_of_file or not eof_ack:
+    while (not end_of_file or not eof_ack) and nack_counter < MAX_NACK:
 
-        (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
-        payload = bytes_read.decode()
+        try: 
+            (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
+            payload = bytes_read.decode()
 
-        if is_ack(payload):
-            
-            
-            if end_of_file:
-                logging.info("Last ACK recieved from %s",address)
-                eof_ack = True
+            if is_ack(payload):
                 
-            else:
+                if end_of_file:
+                    logging.info("Last ACK recieved from %s",address)
+                    eof_ack = True
+                        
+                else:
+                    logging.info("ACK recieved from %s",address)
+                    data, last_seek_send, end_of_file = get_file_data(
+                            last_seek_send, file_name, end_of_file)
 
-                logging.info("ACK recieved from %s",address)
+                    response = make_response(data, end_of_file)
+                    last_response = response
+                    res = udp_socket.sendto(response, address)
 
-                data, last_seek_send, end_of_file = get_file_data(
-                    last_seek_send, file_name, end_of_file)
+                    if res != len(response):
+                        logging.info("Cound not sent all bytes")
+                        last_seek_send -= res
+                    else:
+                        logging.info("PACKET sent to %s",address)
+            
+        except TimeoutError as timeout: 
+                nack_counter += 1
+                logging.info("NACK recieved from %s",address)
+                res = udp_socket.sendto(last_response, address)
 
-                response = make_response(data, end_of_file)
-                last_response = response
-                res = udp_socket.sendto(response, address)
-
-                if res != len(response):
+                if res != len(last_response):
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
                     logging.info("PACKET sent to %s",address)
 
-        elif is_nack(payload):
-
-            logging.info("NACK recieved from %s",address)
-            res = udp_socket.sendto(last_response, address)
-
-            if res != len(last_response):
-                logging.info("Cound not sent all bytes")
-                last_seek_send -= res
-            else:
-                logging.info("PACKET sent to %s",address)
+       
 
     logging.info("Download finished.")
     udp_socket.close()
-
-if __name__ == "__main__":
-    print("anda")

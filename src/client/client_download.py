@@ -1,7 +1,7 @@
 from logging import *
 import logging
 from socket import *
-from common.constants import BUFF_SIZE, ACK, NACK, EOF, NOT_EOF, MODE_WRITE, MODE_ADD, DONWLOAD_CODE, DELIMETER
+from common.constants import BUFF_SIZE, ACK, NACK, EOF, NOT_EOF, MODE_WRITE, MODE_ADD, DONWLOAD_CODE, DELIMETER, MAX_NACK
 from common.protocol import set_up_logger
 
 
@@ -9,8 +9,13 @@ def send_request(client, file_name, addr: tuple):
     request = DONWLOAD_CODE + DELIMETER + file_name
     ack, addr = send_message(client, request, addr)
 
-    while ack == NACK:
-        ack, addr = send_message(client, request, addr)
+    nack_counter = 0
+    while ack == NACK and nack_counter < MAX_NACK:
+        try:
+            ack, addr = send_message(client, request, addr)
+        except TimeoutError as timeout:
+            nack_counter += 1
+    return nack_counter
 
 def write_piece(file_name, mode, piece):
     try:
@@ -52,7 +57,11 @@ def send_ack(client, addr):
 def download_file(client, file_name, path, addr: tuple):
     set_up_logger()
 
-    send_request(client, file_name, addr)
+    nack_counter = send_request(client, file_name, addr)
+
+    if nack_counter == MAX_NACK:
+        client.close()
+        return
 
     count_pieces = 0
     bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
@@ -63,15 +72,15 @@ def download_file(client, file_name, path, addr: tuple):
     count_pieces += 1
 
     while eof == NOT_EOF:
-        
-
-        send_ack(client, addr)
-        bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
-
+               
+        try: 
+            send_ack(client, addr)
+            bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
+        except TimeoutError as timeout:
+            nack_counter += 1
         eof, payload = get_payload(bytes_recibed)
         write_piece(path, MODE_ADD,payload)
         logging.info("Success: Piece %s of the file downloaded", count_pieces)
-
     
     send_ack(client, addr)
 

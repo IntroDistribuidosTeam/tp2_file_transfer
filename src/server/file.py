@@ -4,12 +4,5 @@ def append_file(file_name,chunk):
         file.close()
 
 
-def file_already_exists(file_name):
-    try:
-        file = open(file_name, encoding="utf8")
-    except FileNotFoundError:
-        return False
-    else:
-        file.close()
-        return True
+
 
