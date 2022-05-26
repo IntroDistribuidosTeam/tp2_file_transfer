@@ -1,7 +1,5 @@
 import socket
 import logging
-from subprocess import TimeoutExpired
-from threading import TIMEOUT_MAX
 from common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK,DELIMETER, TIMEOUT, MAX_NACK
 
 LOG_FORMAT = "%(asctime)s - %(message)s"
@@ -59,11 +57,12 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
 
 def read_from_socket(udp_socket):
     max_timeouts = 0
-    while max_timeouts < TIMEOUT_MAX:
+    while max_timeouts < MAX_NACK:
         try:
             (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
             payload = bytes_read.decode()
-        except TimeoutExpired as _:
+            max_timeouts = MAX_NACK
+        except TimeoutError as _:
             max_timeouts += 1
             payload = ERROR
             address = (str(ERROR),str(ERROR))
@@ -86,10 +85,11 @@ def make_package(last_seek_send, file_name, end_of_file):
 
 def send_package(udp_socket,response,address):
     max_timeouts = 0
-    while max_timeouts < TIMEOUT_MAX:
+    while max_timeouts < MAX_NACK:
         try:
             res = udp_socket.sendto(response, address)
-        except TimeoutExpired as _:
+            max_timeouts = MAX_NACK
+        except TimeoutError as _:
             max_timeouts += 1
             res = -1
 
