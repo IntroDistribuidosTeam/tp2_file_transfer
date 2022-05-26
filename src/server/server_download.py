@@ -1,8 +1,11 @@
 import socket
 import logging
+from subprocess import TimeoutExpired
+from threading import TIMEOUT_MAX
 from common.constants import ACK,BUFF_SIZE,FILE_SIZE,NACK,DELIMETER, TIMEOUT, MAX_NACK
-LOG_FORMAT = "%(asctime)s - %(message)s"
 
+LOG_FORMAT = "%(asctime)s - %(message)s"
+ERROR = -1
 
 def set_up_logger():
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -23,9 +26,13 @@ def start_new_connection(address:tuple):
         initial_socket.sendto(ack_package, address)
     return initial_socket
 
+def is_error(payload):
+    if int(payload) != ERROR:
+        return False
+
+    return True
 
 def is_ack(payload):
-
     if int(payload) != ACK:
         return False
 
@@ -50,7 +57,19 @@ def get_file_data(last_seek_send: int, file_name: str, end_of_file: bool):
         return str(file_not_found_e), 0, True
 
 
-# NOTE Mirar lo del checksum
+def read_from_socket(udp_socket):
+    max_timeouts = 0
+    while max_timeouts < TIMEOUT_MAX:
+        try:
+            (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
+            payload = bytes_read.decode()
+        except TimeoutExpired as _:
+            max_timeouts += 1
+            payload = ERROR
+            address = (str(ERROR),str(ERROR))
+
+    return payload,address
+
 
 def make_response(payload: str, end_of_file: bool):
 
@@ -58,6 +77,26 @@ def make_response(payload: str, end_of_file: bool):
     response = str(eof) + DELIMETER + payload
 
     return response.encode()
+
+
+def make_package(last_seek_send, file_name, end_of_file):
+    data, last_seek_send, end_of_file = get_file_data(last_seek_send, file_name, end_of_file)
+    return make_response(data, end_of_file)
+
+
+def send_package(udp_socket,response,address):
+    max_timeouts = 0
+    while max_timeouts < TIMEOUT_MAX:
+        try:
+            res = udp_socket.sendto(response, address)
+        except TimeoutExpired as _:
+            max_timeouts += 1
+            res = -1
+
+    return res
+
+
+
 
 
 def default_response():
@@ -83,53 +122,39 @@ def download(file_name, address):
     eof_ack = False
     last_response = default_response()
     
-    #FIXME -> refactorizar esto
-    data, last_seek_send, end_of_file = get_file_data(last_seek_send, file_name, end_of_file)
 
-    response = make_response(data, end_of_file)
+    
+    response = make_package(last_seek_send, file_name, end_of_file)
+    res = send_package(udp_socket,response,address)
     last_response = response
-    res = udp_socket.sendto(response, address)
-
       
-    while (not end_of_file or not eof_ack) and nack_counter < MAX_NACK:
-
-        try: 
-            (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
-            payload = bytes_read.decode()
-
-            if is_ack(payload):
+    while not end_of_file or not eof_ack:
+        # si salta el timeout por parte de la lectura cierro socket
+        # porque es responsabilidad del cliente de reenviarmelo por timeout
+        payload, address = read_from_socket(udp_socket) 
+        
+        if is_error(payload):
+            logging.error("TIMEOUT on reading, closing socket %s",address)
+            end_of_file = True
+            eof_ack = True
+        elif is_ack(payload):
                 
-                if end_of_file:
-                    logging.info("Last ACK recieved from %s",address)
+            if end_of_file:
+                logging.info("Last ACK recieved from %s",address)
+                eof_ack = True
+            else:
+                logging.info("ACK recieved from %s",address)
+                res = send_package(udp_socket,last_response,address)
+
+                if res == ERROR: 
+                    end_of_file = True
                     eof_ack = True
-                        
-                else:
-                    logging.info("ACK recieved from %s",address)
-                    data, last_seek_send, end_of_file = get_file_data(
-                            last_seek_send, file_name, end_of_file)
-
-                    response = make_response(data, end_of_file)
-                    last_response = response
-                    res = udp_socket.sendto(response, address)
-
-                    if res != len(response):
-                        logging.info("Cound not sent all bytes")
-                        last_seek_send -= res
-                    else:
-                        logging.info("PACKET sent to %s",address)
-            
-        except TimeoutError as timeout: 
-                nack_counter += 1
-                logging.info("NACK recieved from %s",address)
-                res = udp_socket.sendto(last_response, address)
-
-                if res != len(last_response):
+                elif res != len(last_response):
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
-                    logging.info("PACKET sent to %s",address)
+                    logging.info("PACKET re-sent to %s",address)
+            
 
-       
-
-    logging.info("Download finished.")
     udp_socket.close()
+    logging.info("Socket closed.")
