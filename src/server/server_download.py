@@ -64,9 +64,7 @@ def read_from_socket(udp_socket):
             (bytes_read, address) = udp_socket.recvfrom(BUFF_SIZE)
             payload = bytes_read.decode()
             max_timeouts = MAX_NACK
-            print("leyo bien")
         except TimeoutError as _:
-            print("salta el timeout %i ",max_timeouts)
             max_timeouts += 1
             payload = ERROR
             address = (str(ERROR),str(ERROR))
@@ -94,7 +92,6 @@ def send_package(udp_socket,response,address):
         try:
             res = udp_socket.sendto(response, address)
             max_timeouts = MAX_NACK
-            print("se envio bien!")
         except TimeoutError as _:
             max_timeouts += 1
             res = -1
@@ -102,14 +99,8 @@ def send_package(udp_socket,response,address):
     return res
 
 
-
-
-
 def default_response():
     return "0"
-
-
-
 
 def is_nack(payload):
     if (payload) != NACK:
@@ -145,7 +136,6 @@ def download(file_name, address):
             eof_ack = True
         elif is_ack(payload):
                 
-            print("LLEGO un ACK")
             if end_of_file:
                 logging.info("Last ACK recieved from %s",address)
                 eof_ack = True
@@ -163,7 +153,7 @@ def download(file_name, address):
                     logging.info("Cound not sent all bytes")
                     last_seek_send -= res
                 else:
-                    logging.info("PACKET re-sent to %s",address)
+                    logging.info("PACKET sent to %s",address)
             
 
     print("Cerrando socket con cliente.")

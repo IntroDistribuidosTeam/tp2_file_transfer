@@ -81,7 +81,8 @@ def download_file(client, file_name, path, addr: tuple):
         eof, payload = get_payload(bytes_recibed)
         write_piece(path, MODE_ADD,payload)
         logging.info("Success: Piece %s of the file downloaded", count_pieces)
-    
+
+    print("enviando el ultimo ACK")
     send_ack(client, addr)
 
     client.close()
