@@ -13,17 +13,16 @@ def send_request(client, file_name, addr: tuple):
     while ack == NACK and nack_counter < MAX_NACK:
         try:
             ack, addr = send_message(client, request, addr)
-        except TimeoutError as timeout:
+        except TimeoutError as _:
             nack_counter += 1
     return nack_counter
 
 def write_piece(file_name, mode, piece):
     try:
-        with open(file_name, mode) as file:
+        with open(file_name, mode,encoding='utf-8') as file:
             s = file.write(piece)
             print("escribio: %i bytes", s)
-    except FileNotFoundError as error:
-
+    except FileNotFoundError as _:
         logging.error("Error: Could not write in file")
 
 
@@ -44,7 +43,6 @@ def get_payload(bytes_read):
     
     print(eof)
     return eof,payload[2:]
-
 
 
 def send_ack(client, addr):
@@ -72,11 +70,11 @@ def download_file(client, file_name, path, addr: tuple):
     count_pieces += 1
 
     while eof == NOT_EOF:
-               
+             
         try: 
             send_ack(client, addr)
             bytes_recibed, addr = client.recvfrom(BUFF_SIZE)
-        except TimeoutError as timeout:
+        except TimeoutError as _:
             nack_counter += 1
         eof, payload = get_payload(bytes_recibed)
         write_piece(path, MODE_ADD,payload)

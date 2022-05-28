@@ -1,7 +1,5 @@
-from ast import arg
 import logging
 import socket
-
 from common.parser import parse_client_download_arguments
 from client.client_download import download_file
 
