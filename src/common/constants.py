@@ -15,3 +15,4 @@ NOT_EOF = 0
 MODE_WRITE = "w"
 MODE_ADD = "a"
 LOG_FORMAT = "%(asctime)s - %(message)s"
+MAX_WINDOW = 4
