@@ -1,7 +1,9 @@
+from operator import imod
 import threading
 import time
 import socket
 from os import stat, path
+from file_reader import FileReader
 
 WIN_SIZE = 4
 SEC_BASE = 1
@@ -25,15 +27,8 @@ class Sender:
         self.base_num = SEC_BASE
         self.window_threads = {}
         self.socket_addr = socket_address
-        self.file_path = file_path
-        self.file_name = file_name
-        self.file_size = 0
-        self.seek = 0
-        self.file_exist()
-
-    def file_exist(self):
-        if path.exists(self.file_path):
-            self.file_size = stat(self.file_path).st_size
+        self.file_reader = FileReader(file_path,file_name)
+        
 
     def recieve_ack(self):
         data, address = self.socket.recvfrom(MAX_RECV_BYTES)
@@ -53,11 +48,6 @@ class Sender:
                     msg[bytes_sent:].encode(), self.socket_addr)
             seq_num = self.recieve_ack()
 
-    def open_file(self):
-        if self.file_size != 0:
-            raise FileExistsError
-        return open(self.file_path, "r", encoding='utf8')
-
     def repeat(self, socket: socket, addr, packet):
         byte = 0
         while byte != len(packet):
@@ -71,27 +61,6 @@ class Sender:
                                            args=[self.socket, self.socket_addr, packets[i]])
         return threads
 
-    def get_packets(self, chunks, seq_num):
-        payloads = []
-        eof = False
-        try:
-            file = self.open_file()
-
-            file.seek(self.seek)
-            for i in range(1, (chunks + 1)):
-                payload = file.read(PAYLOAD_SIZE)
-                self.seek = file.tell()
-                eof = True if self.seek == self.file_size else False
-                msg = str((seq_num + i)) + DELIMETER + str(eof) + DELIMETER + payload
-                payloads.append(msg)
-
-            file.close()
-        except FileExistsError as error:
-            eof = True
-            msg = str(-1) + DELIMETER + str(eof) + DELIMETER + str(error)
-            payloads.append(msg)
-
-        return payloads
 
     def get_new_base_num(self, buffer):
         i = 1
@@ -120,7 +89,7 @@ class Sender:
             if seq_num == self.base_num:
                 buffer.sort()
                 move_foward = self.get_new_base_num(buffer=buffer)
-                packets = self.get_packets(move_foward, buffer[-1])
+                packets = self.file_reader.get_packets(move_foward, buffer[-1])
 
                 for i in range(1, len(packets + 1)):
                     self.window_threads[buffer[-1] + i] += threading.Thread(
