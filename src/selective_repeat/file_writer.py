@@ -1,3 +1,5 @@
+import os
+
 class FileWriter:
 
     def __init__(self, file_path, file_name):
@@ -9,3 +11,9 @@ class FileWriter:
         with open(self.file_path, 'w', encoding="utf8") as file:
             file.write(chunk)
         
+    def get_filepath(self):
+        return self.file_path
+
+    def remove_path(self):
+        os.remove(self.file_path)
+    

@@ -39,7 +39,7 @@ class Sender:
         return data.decode()
 
     def init_handshake(self, mode):
-        msg = mode + DELIMETER + self.file_name
+        msg = mode + DELIMETER + self.file_reader.get_filename()
         seq_num = 1
         while seq_num != 0:
             bytes_sent = 0
@@ -73,12 +73,13 @@ class Sender:
         return (i-1)
 
     def start_sender(self):
-        self.file_exist()
+        self.file_reader.file_exist()
+        
         buffer = []
-        packets = self.get_packets(self.window_size, self.base_num)
+        packets = self.file_reader.get_packets(self.window_size, self.base_num)
         self.window_threads = self.init_thread_pool(packets=packets)
 
-        while self.seek < self.file_size:
+        while not self.file_reader.end_of_file():
 
             seq_num = int(self.recieve_ack())
             buffer.append(seq_num)
@@ -101,5 +102,4 @@ class Sender:
             self.window_threads[seq_num].cancel()
 
         self.window_threads.clear()
-
         self.socket.close()

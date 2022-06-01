@@ -15,6 +15,10 @@ class FileReader:
 
         self.file_exist()
     
+
+    def get_filename(self):
+        return self.filename
+
     def file_exist(self):
         if path.exists(self.path):
             self.file_size = stat(self.file_path).st_size
@@ -45,3 +49,6 @@ class FileReader:
             payloads.append(msg)
 
         return payloads
+    
+    def end_of_file(self):
+        return self.seek >= self.file_size
