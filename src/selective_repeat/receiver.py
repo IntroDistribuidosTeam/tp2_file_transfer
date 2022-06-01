@@ -81,7 +81,7 @@ class Receiver:
             logging.info("Stopped receiving packets due to error")
             return
         logging.info("Finished uploading file %s from client %s",
-                     self.file_writer.get_filepath(), self.sender_addr)
+                     self.file_writer.get_filename(), self.sender_addr)
 
 
     def start_receiver_stop_and_wait(self):
@@ -101,5 +101,6 @@ class Receiver:
         if error:
             logging.info("Stopped receiving packets due to error")
             return   
-        logging.info("Finished receiving file %s from client %s",self.file_writer.get_filename(), self.sender_addr)
+        logging.info("Finished receiving file %s from client %s", 
+                     self.file_writer.get_filename(), self.sender_addr)
         

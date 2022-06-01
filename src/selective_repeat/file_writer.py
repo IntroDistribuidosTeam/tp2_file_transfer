@@ -14,6 +14,9 @@ class FileWriter:
     def get_filepath(self):
         return self.file_path
 
+    def get_filename(self):
+        return self.file_name
+
     def remove_path(self):
         os.remove(self.file_path)
     
