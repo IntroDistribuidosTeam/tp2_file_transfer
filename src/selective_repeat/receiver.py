@@ -9,7 +9,7 @@ class Receiver:
     def __init__(self, sender_addr: tuple, file_path, file_name, socket):
         self.socket = socket
         self.window_size = MAX_WINDOW
-        self.recv_base = 0  # TODO: ver si arrancamos en 0 o en 1
+        self.recv_base = 1
         self.recv_buff = {}
         self.sender_addr = sender_addr
         self.file_writer = FileWriter(file_path, file_name)
@@ -48,11 +48,17 @@ class Receiver:
         bytes_sent = self.socket.sendto(
             str(sequence_number).encode(), self.sender_addr)
 
-        while bytes_sent != sequence_number:
-            bytes_sent = self.socket.sendto(
+        while bytes_sent is not sequence_number and timeout_counter < MAX_NACK:
+            try:
+                bytes_sent, _ = self.socket.sendto(
                 str(sequence_number).encode(), self.sender_addr)
+            except socket.timeout as _:
+                timeout_counter += 1
 
-    def receive(self):
+        
+            bytes_sent = 
+
+    def start_receiver(self):
         eof = NOT_EOF
         error = False
         #payload =[seq/eof/payload]
@@ -66,13 +72,13 @@ class Receiver:
                 error = True
             else:
             
-                self.send_ack(sequence_number)
-                if sequence_number == self.recv_base:
+                error = self.send_ack(sequence_number)
+                if not error and sequence_number == self.recv_base:
                     self.write_file(payload)
                     
-                    if (self.recv_base > int((1 << 16) - 1)):  # TODO: ver si arrancamos en 0 o en 1
+                    if (self.recv_base > int(1 << 16)):
                         self.recv_base = 0
-                else:
+                elif not error:
                     self.recv_buff[sequence_number] = payload
 
         if error:
