@@ -1,6 +1,6 @@
 import logging
 import socket
-from common.constants import NOT_EOF, MAX_WINDOW, MAX_NACK, BUFF_SIZE, DELIMETER
+from common.constants import NOT_EOF, MAX_WINDOW, MAX_NACK, BUFF_SIZE, DELIMETER,ACK
 from file_writer import FileWriter
 
 
@@ -14,9 +14,8 @@ class Receiver:
         self.sender_addr = sender_addr
         self.file_writer = FileWriter(file_path, file_name)
 
-    def recv_payload(self):
+    def recv_payload(self,total_payload_fields):
         timeout_counter = 0
-        error_list = [-1, 0, 0]
 
         while timeout_counter < MAX_NACK:
             try:
@@ -25,9 +24,9 @@ class Receiver:
                 timeout_counter += 1
 
         if (timeout_counter == MAX_NACK):
-            return error_list
+            return [-1] * total_payload_fields
 
-        return bytes_recv.decode().split(DELIMETER, 2)
+        return bytes_recv.decode().split(DELIMETER, total_payload_fields-1)
 
 
     def write_file(self, payload):
@@ -55,17 +54,14 @@ class Receiver:
             except socket.timeout as _:
                 timeout_counter += 1
 
-        
-            bytes_sent = 
 
-    def start_receiver(self):
+    def start_receiver_selective_repeat(self):
         eof = NOT_EOF
         error = False
-        #payload =[seq/eof/payload]
 
         while eof == NOT_EOF and not error:
 
-            sequence_number,eof,payload = self.recv_payload()
+            sequence_number,eof,payload = self.recv_payload(total_payload_fields=3)
             
             if self.is_error(sequence_number):
                 self.file_writer.remove_path()
@@ -82,7 +78,28 @@ class Receiver:
                     self.recv_buff[sequence_number] = payload
 
         if error:
-            logging.info("Stopped receiving after repeated sequence of nacks")
+            logging.info("Stopped receiving packets due to error")
             return
         logging.info("Finished uploading file %s from client %s",
                      self.file_writer.get_filepath(), self.sender_addr)
+
+
+    def start_receiver_stop_and_wait(self):
+        eof = NOT_EOF
+        error = False
+
+        while eof == NOT_EOF and not error:
+            eof,payload = self.recv_payload(total_payload_fields=2)
+            if self.is_error(eof):
+                error = True
+                self.file_writer.remove_path()
+            else:
+                eof = int(eof)
+                self.file_writer.write(payload)
+                error = self.send_ack(ACK)
+
+        if error:
+            logging.info("Stopped receiving packets due to error")
+            return   
+        logging.info("Finished receiving file %s from client %s",self.file_writer.get_filename(), self.sender_addr)
+        
