@@ -16,13 +16,13 @@ class FileReader:
         self.file_exist()
     
     def file_exist(self):
-        if path.exists(self.file_path):
+        if path.exists(self.path):
             self.file_size = stat(self.file_path).st_size
 
     def open_file(self):
         if self.file_size != 0:
             raise FileExistsError
-        return open(self.file_path, "r", encoding='utf8')
+        return open(self.path, "r", encoding='utf8')
 
     def get_packets(self, chunks, seq_num):
         payloads = []
