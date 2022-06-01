@@ -49,6 +49,24 @@ class FileReader:
             payloads.append(msg)
 
         return payloads
-    
+
     def end_of_file(self):
         return self.seek >= self.file_size
+
+    def get_file_data(self, end_of_file: bool):
+        # Muevo hasta el seek donde termine la ultima vez
+        try:
+            file = self.open_file()
+            file.seek(self.seek)
+            file_payload = file.read(PAYLOAD_SIZE).strip()
+            self.seek = file.tell()
+
+            if len(file_payload) <= PAYLOAD_SIZE:
+                end_of_file = True
+            return file_payload,end_of_file
+        except FileExistsError as error:
+            #logging.error("Exception: %s ",file_not_found_e)
+            return str(error),True
+
+    def update_seek(self, res):
+        self.seek -= res

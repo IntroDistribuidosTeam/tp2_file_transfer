@@ -24,7 +24,7 @@ def main():
     reciver = Receiver(addr, args.dts, args.name, client)
     handshake = Handshake('U', args.name, client, addr)
     handshake.init_handshake()
-    reciver.receive()
+    reciver.start_receiver_selective_repeat()
     client.close()
 
 if __name__ == "__main__":
