@@ -1,7 +1,9 @@
 import logging
 import socket
+from receiver import Receiver
+from handshake import Handshake
 from common.parser import parse_client_download_arguments
-from client.client_download import download_file
+
 
 def main():
     args = parse_client_download_arguments()
@@ -19,7 +21,11 @@ def main():
     print(args)
     #RUN CLIENT
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    download_file(client ,args.name,args.dst ,addr)
+    reciver = Receiver(addr, args.dts, args.name, client)
+    handshake = Handshake('U', args.name, client, addr)
+    handshake.init_handshake()
+    reciver.receive()
+    client.close()
 
 if __name__ == "__main__":
     main()

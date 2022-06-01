@@ -102,4 +102,3 @@ class Sender:
             self.window_threads[seq_num].cancel()
 
         self.window_threads.clear()
-        self.socket.close()
