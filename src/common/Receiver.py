@@ -13,6 +13,7 @@ class Receiver:
         self.recv_buff = {}
         self.sender_addr = sender_addr
         self.file_writer = FileWriter(file_path,file_name)
+        self.file_path = file_path
 
     def recv_payload(self):
         timeout_counter = 0
@@ -33,12 +34,18 @@ class Receiver:
 
 
     def write_file(self,payload):
-        self.file_writer.write(payload)
+        chunk = payload
+        #self.file_writer.write(payload)
         self.recv_base += 1
+
         while self.recv_buff[self.recv_base] != None:
-            self.file_writer.write(self.recv_buff[self.recv_base])
+            #self.file_writer.write(self.recv_buff[self.recv_base])
+            chunk += self.recv_buff[self.recv_base]
             self.recv_buff.pop(self.recv_base,None)
             self.recv_base += 1
+
+        self.file_writer(chunk)
+    
 
     
 
@@ -53,7 +60,7 @@ class Receiver:
             bytes_sent = socket.sendto(str(sequence_number).encode(), self.sender_addr)
 
 
-    def receive(self,path,file_name):
+    def receive(self,file_name):
         eof = NOT_EOF
         error = False
         #payload =[seq/eof/payload]
@@ -67,11 +74,11 @@ class Receiver:
             self.send_ack(sequence_number)
 
             if self.is_error(sequence_number):
-                os.remove(path)
+                os.remove(self.file_path)
                 error = True
             else:
                 if sequence_number == self.recv_base:
-                    self.write_file(path,payload)
+                    self.write_file(payload)
                     if (self.recv_base > int((1 << 16) - 1)):#TODO: ver si arrancamos en 0 o en 1
                         self.recv_base = 0
                 else: 
