@@ -46,6 +46,7 @@ class Receiver:
     def send_ack(self, sequence_number):
         bytes_sent = self.socket.sendto(
             str(sequence_number).encode(), self.sender_addr)
+        timeout_counter = 0
 
         while bytes_sent is not sequence_number and timeout_counter < MAX_NACK:
             try:
@@ -53,6 +54,10 @@ class Receiver:
                 str(sequence_number).encode(), self.sender_addr)
             except socket.timeout as _:
                 timeout_counter += 1
+
+        if timeout_counter == MAX_NACK:
+            return True
+        return False
 
 
     def start_receiver_selective_repeat(self):
