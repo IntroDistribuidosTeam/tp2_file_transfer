@@ -1,8 +1,8 @@
 import logging
 import socket
 
-from common.constants import MAX_NACK, ACK, NACK, NOT_EOF, SEC_BASE, MAX_RECV_BYTES,ACK_LEN
-from file_writer import FileWriter
+from selective_repeat.file_writer import FileWriter
+from common.constants import BUFF_SIZE, MAX_NACK, ACK, NOT_EOF, SEC_BASE, ACK_LEN
 
 
 SEQUENCE_NUMBER_BYTES = 2
@@ -25,7 +25,7 @@ class Receiver:
 
         while timeout_counter < MAX_NACK and bytes_recv == 0:
             try:
-                bytes_recv, _ = self.socket.recvfrom(MAX_RECV_BYTES)
+                bytes_recv, _ = self.socket.recvfrom(BUFF_SIZE)
             except socket.timeout as _:
                 timeout_counter += 1
 
@@ -61,6 +61,7 @@ class Receiver:
             try:
                 response = (ACK_LEN).to_bytes(2, 'big') + sequence_number.to_bytes(2, 'big')
                 bytes_sent, _ = self.socket.sendto(response, self.sender_addr)
+                print('ENVIADO:', response, 'BYTES_SENT:', bytes_sent)
             except socket.timeout as _:
                 timeout_counter += 1
 
@@ -125,16 +126,17 @@ class Receiver:
 
         while eof == NOT_EOF and not error:
             bytes_received = self.recv_payload()
+            print('RECEIVED:', bytes_received)
             _, length, eof, payload = self.decode_packet(bytes_received)
+            print('DEENCODED:', _, 'LEN:', length, 'EOF:', eof, 'PAYLOAD:', payload)
 
             if self.is_error(_):
                 error = True
                 self.file_writer.remove_path()
             elif length == len(payload):
                 self.file_writer.write(payload)
+                print('ESCRIBI BIEN GIL')
                 error = self.send_response(ACK)
-            else:
-                error = self.send_response(NACK)
 
         if error:
             logging.info("Stopped receiving packets due to error")

@@ -22,4 +22,5 @@ class FileWriter:
     
     def remove_path(self):
         ''''Removes file in file_path'''
-        os.remove(self.file_path)
+        if os.path.exists(self.file_path):
+            os.remove(self.file_path)

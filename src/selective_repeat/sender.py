@@ -2,8 +2,8 @@ import logging
 import socket
 import time
 import threading
-from file_reader import FileReader
-from common.constants import ACK, SEC_BASE, MAX_RECV_BYTES, MAX_NACK, TIME,MAX_WINDOW,LOG_FORMAT
+from selective_repeat.file_reader import FileReader
+from common.constants import ACK, SEC_BASE, MAX_RECV_BYTES, MAX_NACK, MAX_WINDOW, LOG_FORMAT
 
 
 class Sender:
@@ -21,20 +21,21 @@ class Sender:
     def receive_ack(self):
         '''Receives ackowledge packet'''
         
-        data = 0
+        data = -1
         timeout_counter = 0
 
-        while timeout_counter < MAX_NACK and data == 0:
+        while timeout_counter < MAX_NACK and data == -1:
             try:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
             except socket.timeout as _:
+                print('TIMEOUT')
                 timeout_counter += 1
+
+        if timeout_counter == MAX_NACK:
+            return (0).to_bytes(2,'big')
 
         if self.socket_addr != address:
             self.socket_addr = address
-        
-        if timeout_counter == MAX_NACK:
-            return (0).to_bytes(2,'big')
         
         return data
         
@@ -43,7 +44,7 @@ class Sender:
         ''' Re send package if ACK has not been recieved yet'''
  
         while True:
-            time.sleep(TIME)
+            time.sleep(5)
             _ = socket_udp.sendto(packet, addr)
 
     def decode_packet(self,data):
@@ -137,39 +138,41 @@ class Sender:
         end_of_file = False
         eof_ack = False
 
-        payloads = self.file_reader.get_packets(1,1)
+        payloads = self.file_reader.get_packets(1, 0)
         res = self.send_package(payloads[0])
-        last_response = payloads[0]
+        print('PAYLOAD:', payloads[0])
         
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
-            payload = self.receive_ack()
-            ack,_ = self.decode_packet(payload)
+            packet = self.receive_ack()
+            print('RECEIVED:', packet)
+            ack, _ = self.decode_packet(packet)
+            print('DECODED:', ack, 'SEQ:', _)
+
             
             if  ack == -1:
-                logging.error("TIMEOUT on reading, closing socket %s",self.socket_addr)
+                logging.error("TIMEOUT on reading, closing socket %s", self.socket_addr)
                 end_of_file = True
                 eof_ack = True
             elif ACK == ack:
                   
                 if end_of_file:
-                    logging.info("Last ACK recieved from %s",self.socket_addr)
+                    logging.info("Last ACK recieved from %s", self.socket_addr)
                     eof_ack = True
                     print("LLEGO ultimo ACK")
                 else:
-                    logging.info("ACK recieved from %s",self.socket_addr)
+                    logging.info("ACK recieved from %s", self.socket_addr)
                   
-                    payloads = self.file_reader.get_packets(1,1)
                     res = self.send_package(payloads[0])
+
+                    end_of_file = self.file_reader.eof()
 
                     if res == -1:
                         end_of_file = True
                         eof_ack = True
-                    elif res != len(last_response):
-                        logging.info("Cound not sent all bytes")
-                        self.file_reader.update_seek(res)
                     else:
-                        logging.info("PACKET sent to %s",self.socket_addr)
+                        logging.info("PACKET sent to %s".format(self.socket_addr))
+                        payloads = self.file_reader.get_packets(1, 0)
 
         logging.info("Socket closed.")
