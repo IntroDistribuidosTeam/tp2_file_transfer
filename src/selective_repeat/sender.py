@@ -139,15 +139,17 @@ class Sender:
         eof_ack = False
 
         payloads = self.file_reader.get_packets(1, 0)
+        end_of_file = self.file_reader.eof()
         res = self.send_package(payloads[0])
         print('PAYLOAD:', payloads[0])
         
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
+            print('ANTES DE ACK')
             packet = self.receive_ack()
             print('RECEIVED:', packet)
-            ack, _ = self.decode_packet(packet)
+            _, ack = self.decode_packet(packet)
             print('DECODED:', ack, 'SEQ:', _)
 
             

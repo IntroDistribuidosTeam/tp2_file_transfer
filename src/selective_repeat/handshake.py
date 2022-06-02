@@ -1,8 +1,7 @@
 import socket
 import logging
-from common.constants import ACK_LEN,MAX_RECV_BYTES,ACK
+from common.constants import ACK_LEN, MAX_NACK, MAX_RECV_BYTES, ACK
 
-# inicia la comunicacion
 # inicia la comunicacion
 class Handshake:
 
@@ -14,7 +13,18 @@ class Handshake:
 
     def receive_ack(self):
         '''handles ack '''
-        data, address = self.socket.recvfrom(MAX_RECV_BYTES)
+        attempts = 0
+        data = -1
+        address = self.socket_addr
+        while attempts < MAX_NACK and data == -1:
+            try:
+                data, address = self.socket.recvfrom(MAX_RECV_BYTES)
+            except socket.timeout as _:
+                print('TIMEOUT')
+                attempts += 1
+
+        if attempts == MAX_NACK:
+            return -1, address
 
         return int.from_bytes(data[2:], 'big'), address
 
@@ -27,6 +37,8 @@ class Handshake:
             while bytes_sent != len(msg):
                 bytes_sent += self.socket.sendto(msg, self.socket_addr)
             seq_num, new_addr = self.receive_ack()
+            if seq_num == -1:
+                return self.socket_addr
         return new_addr
 
     def server_handshake(self):

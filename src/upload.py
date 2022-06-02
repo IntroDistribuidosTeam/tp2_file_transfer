@@ -24,8 +24,9 @@ def main():
     msg = 'U'.encode() + args.name.encode()
     
     new_addr = handshake.client_handshake(msg)
-    sender = Sender(new_addr, args.src, args.name, client)
-    sender.start_sender_stop_and_wait()
+    if new_addr != addr:
+        sender = Sender(new_addr, args.src, args.name, client)
+        sender.start_sender_stop_and_wait()
     client.close()
 
 if __name__ == "__main__":

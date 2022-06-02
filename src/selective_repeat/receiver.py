@@ -57,12 +57,13 @@ class Receiver:
         bytes_sent = 0
         timeout_counter = 0
 
-        while bytes_sent != SEQUENCE_NUMBER_BYTES and timeout_counter < MAX_NACK:
+        while bytes_sent != 4 and timeout_counter < MAX_NACK:
             try:
                 response = (ACK_LEN).to_bytes(2, 'big') + sequence_number.to_bytes(2, 'big')
-                bytes_sent, _ = self.socket.sendto(response, self.sender_addr)
+                print('SENDER ADDRESS', self.sender_addr)
+                bytes_sent = self.socket.sendto(response, self.sender_addr)
                 print('ENVIADO:', response, 'BYTES_SENT:', bytes_sent)
-            except socket.timeout as _:
+            except socket.timeout:
                 timeout_counter += 1
 
         if timeout_counter == MAX_NACK:
@@ -133,7 +134,7 @@ class Receiver:
             if self.is_error(_):
                 error = True
                 self.file_writer.remove_path()
-            elif length == len(payload):
+            elif length == len(bytes_received):
                 self.file_writer.write(payload)
                 print('ESCRIBI BIEN GIL')
                 error = self.send_response(ACK)
