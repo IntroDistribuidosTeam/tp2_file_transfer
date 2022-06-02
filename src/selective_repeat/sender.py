@@ -5,8 +5,8 @@ import socket
 import logging
 
 from file_reader import FileReader
-
 from common.constants import ACK,BUFF_SIZE,DELIMETER,MAX_NACK
+
 WIN_SIZE = 4
 SEC_BASE = 1
 DELIMETER = '/'
@@ -48,9 +48,8 @@ def set_up_logger():
 
 class Sender:
 
-    def __init__(self, socket_address: tuple, file_path, file_name, socket):
-        self.socket = socket
-        self.window_size = WIN_SIZE
+    def __init__(self, socket_address: tuple, file_path, file_name, udp_socket):
+        self.socket = udp_socket
         self.base_num = SEC_BASE
         self.window_threads = {}
         self.socket_addr = socket_address
@@ -73,7 +72,7 @@ class Sender:
 
     def init_thread_pool(self, packets):
         threads = {}
-        for i in range(self.base_num, self.window_size + 1):
+        for i in range(self.base_num, WIN_SIZE + 1):
             threads[i] += threading.Thread(target=self.repeat,
                                            args=[self.socket, self.socket_addr, packets[i]])
         return threads
@@ -93,7 +92,7 @@ class Sender:
         self.file_reader.file_exist()
         
         buffer = []
-        packets = self.file_reader.get_packets(self.window_size, self.base_num)
+        packets = self.file_reader.get_packets(WIN_SIZE, self.base_num)
         self.window_threads = self.init_thread_pool(packets=packets)
 
         while not self.file_reader.end_of_file():
@@ -121,8 +120,8 @@ class Sender:
         self.window_threads.clear()
 
 
-    def make_package(self, end_of_file):
-        data, end_of_file = self.file_reader.get_file_data(end_of_file)
+    def make_package(self):
+        data, end_of_file = self.file_reader.get_file_data()
         payload = make_response(data, end_of_file)
         return payload,end_of_file
 
@@ -161,7 +160,7 @@ class Sender:
         eof_ack = False
         last_response = default_response()
       
-        response,end_of_file = self.make_package(end_of_file)
+        response,end_of_file = self.make_package()
         res = self.send_package(response)
         last_response = response
         
@@ -183,7 +182,7 @@ class Sender:
                 else:
                     logging.info("ACK recieved from %s",self.socket_addr)
                   
-                    response,end_of_file = self.make_package(end_of_file)
+                    response,end_of_file = self.make_package()
                     res = self.send_package(last_response)
 
                     if res == ERROR:

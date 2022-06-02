@@ -1,13 +1,14 @@
 import logging
 import socket
-from common.constants import NOT_EOF, MAX_WINDOW, MAX_NACK, BUFF_SIZE, DELIMETER,ACK
+
 from file_writer import FileWriter
+from common.constants import NOT_EOF, MAX_WINDOW, MAX_NACK, BUFF_SIZE, DELIMETER,ACK
 
 
 class Receiver:
 
-    def __init__(self, sender_addr: tuple, file_path, file_name, socket):
-        self.socket = socket
+    def __init__(self, sender_addr: tuple, file_path, file_name, udp_socket):
+        self.socket = udp_socket
         self.window_size = MAX_WINDOW
         self.recv_base = 1
         self.recv_buff = {}

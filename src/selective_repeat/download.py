@@ -21,10 +21,10 @@ def main():
     print(args)
     #RUN CLIENT
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    reciver = Receiver(addr, args.dts, args.name, client)
-    handshake = Handshake('U', args.name, client, addr)
+    receiver = Receiver(addr, args.dts, args.name, client)
+    handshake = Handshake('D', args.name, client, addr)
     handshake.init_handshake()
-    reciver.start_receiver_selective_repeat()
+    receiver.start_receiver_selective_repeat()
     client.close()
 
 if __name__ == "__main__":
