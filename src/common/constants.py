@@ -16,3 +16,5 @@ MODE_ADD = "a"
 LOG_FORMAT = "%(asctime)s - %(message)s"
 MAX_WINDOW = 4
 SEC_BASE = 1
+MAX_RECV_BYTES = 2
+ACK_LEN = 4 

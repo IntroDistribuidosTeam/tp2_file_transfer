@@ -22,8 +22,9 @@ def main():
 
     sender = Sender(addr, args.src, args.name, client_skt)
     
-    handshake = Handshake('U', args.name, client_skt, addr)
-    handshake.init_handshake()
+    handshake = Handshake(client_skt, addr)
+    msg = 'U' + args.name
+    handshake.init_handshake(msg.encode())
     sender.start_sender_selective_repeat()
     
     client_skt.close()

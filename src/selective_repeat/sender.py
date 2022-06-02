@@ -1,84 +1,72 @@
-from operator import imod
-import threading
-import time
-import socket
 import logging
-
+import socket
+import time
+import threading
 from file_reader import FileReader
-from common.constants import ACK,BUFF_SIZE,DELIMETER,MAX_NACK
+from common.constants import ACK, SEC_BASE, MAX_RECV_BYTES, MAX_NACK, TIME,MAX_WINDOW,LOG_FORMAT
 
-WIN_SIZE = 4
-SEC_BASE = 1
-DELIMETER = '/'
-MAX_RECV_BYTES = 2
-TIME = 10
-PAYLOAD_SIZE = 1021
-LOG_FORMAT = "%(asctime)s - %(message)s"
-ERROR = -1
-
-# Sender
-# Recibe los acks con numero de secuencia
-# NOTE
-# Ahora, nuestro ACK tiene un tam de 2 bytes
-# Asi podremos tener hasta un sequence number de 65k
-
-def default_response():
-    return "0"
-
-def is_error(payload):
-    if int(payload) != ERROR:
-        return False
-
-    return True
-
-def is_ack(payload):
-    if int(payload) != ACK:
-        return False
-
-    return True
-def make_response(payload: str, end_of_file: bool):
-
-    eof = 1 if end_of_file else 0
-    response = str(eof) + DELIMETER + payload
-
-    return response.encode()
-
-def set_up_logger():
-    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
 class Sender:
 
+    '''Implementation of sender'''
+
     def __init__(self, socket_address: tuple, file_path, file_name, udp_socket):
         self.socket = udp_socket
+        self.socket_addr = socket_address
         self.base_num = SEC_BASE
         self.window_threads = {}
-        self.socket_addr = socket_address
         self.file_reader = FileReader(file_path,file_name)
+    
+    
+    def receive_ack(self):
+        '''Receives ackowledge packet'''
+        
+        data = 0
+        timeout_counter = 0
 
-
-    def recieve_ack(self):
-        data, address = self.socket.recvfrom(MAX_RECV_BYTES)
+        while timeout_counter < MAX_NACK and data == 0:
+            try:
+                data, address = self.socket.recvfrom(MAX_RECV_BYTES)
+            except socket.timeout as _:
+                timeout_counter += 1
 
         if self.socket_addr != address:
             self.socket_addr = address
-
-        return data.decode()
-
-    def repeat(self, socket: socket, addr, packet):
-        byte = 0
-        while byte != len(packet):
+        
+        if timeout_counter == MAX_NACK:
+            return (0).to_bytes(2,'big')
+        
+        return data
+        
+    
+    def repeat(self, socket_udp: socket, addr, packet):
+        ''' Re send package if ACK has not been recieved yet'''
+ 
+        while True:
             time.sleep(TIME)
-            byte += socket.sendto(packet[byte:].encode(), addr)
+            _ = socket_udp.sendto(packet, addr)
 
+    def decode_packet(self,data):
+        ''' Decode data in bytes to correct fields '''
+        
+        if len(data) <= 2:
+            return -1,-1
+
+        length = int.from_bytes(data[:2],'big')
+        seq_num = int.from_bytes(data[2:],'big')
+        return length, seq_num
+    
     def init_thread_pool(self, packets):
+        ''' Initilices packet threads'''
         threads = {}
-        for i in range(self.base_num, WIN_SIZE + 1):
+        for i in range(self.base_num, MAX_WINDOW + 1):
             threads[i] += threading.Thread(target=self.repeat,
                                            args=[self.socket, self.socket_addr, packets[i]])
         return threads
 
 
     def get_new_base_num(self, buffer):
+        ''' Calculates new base num from ordered buffer'''
         i = 1
         keep = True
         while keep and i < len(buffer):
@@ -87,93 +75,83 @@ class Sender:
 
         self.base_num = (buffer[i-1]+1)
         return (i-1)
-
-    def start_sender_selective_repeat(self):
-        self.file_reader.file_exist()
         
-        buffer = []
-        packets = self.file_reader.get_packets(WIN_SIZE, self.base_num)
-        self.window_threads = self.init_thread_pool(packets=packets)
-
-        while not self.file_reader.end_of_file():
-
-            seq_num = int(self.recieve_ack())
-            buffer.append(seq_num)
-
-            self.window_threads[seq_num].cancel()
-            self.window_threads.pop(seq_num)
-
-            if seq_num == self.base_num:
+    def move_window(self,seq_num,buffer):
+        '''Moves buffer window'''
+        if seq_num == self.base_num:
                 buffer.sort()
                 move_foward = self.get_new_base_num(buffer=buffer)
                 packets = self.file_reader.get_packets(move_foward, buffer[-1])
 
-                for i in range(1, len(packets + 1)):
+                for i in range(1, len(packets) + 1):
                     self.window_threads[buffer[-1] + i] += threading.Thread(
                         target=self.repeat, args=[self.socket, self.socket_addr, packets[i-1]])
+                    buffer.pop(i-1)
 
-        while len(buffer) != 4:
-            seq_num = int(self.recieve_ack())
+    def start_sender_selective_repeat(self):
+        '''Starts sender using selective repeat protocol'''
+      
+        
+        buffer = []
+        packets = self.file_reader.get_packets(MAX_WINDOW, self.base_num)
+        self.window_threads = self.init_thread_pool(packets=packets)
+
+        while not self.file_reader.end_of_file():
+
+            bytes_received = self.receive_ack()
+            _, seq_num = self.decode_packet(bytes_received)
+        
             buffer.append(seq_num)
             self.window_threads[seq_num].cancel()
+            self.window_threads.pop(seq_num)
+            self.move_window(seq_num,buffer)
+        
+        
+        while len(self.window_threads) > 0:
+            bytes_received = self.receive_ack()
+            _, seq_num = self.decode_packet(bytes_received)
+            buffer.append(seq_num)
+            self.window_threads[seq_num].cancel()
+            self.window_threads.pop(seq_num)
 
         self.window_threads.clear()
 
-
-    def make_package(self):
-        data, end_of_file = self.file_reader.get_file_data()
-        payload = make_response(data, end_of_file)
-        return payload,end_of_file
-
     def send_package(self, response):
+        ''' Attemps to send the response for max_nack times'''
         max_timeouts = 0
         while max_timeouts < MAX_NACK:
             try:
                 res = self.socket.sendto(response, self.socket_addr)
                 max_timeouts = MAX_NACK
-            except TimeoutError as _:
+            except socket.timeout as _:
                 max_timeouts += 1
                 res = -1
 
         return res
 
-    def read_from_socket(self):
-        max_timeouts = 0
-        while max_timeouts < MAX_NACK:
-            try:
-                (bytes_read, address) = self.socket.recvfrom(BUFF_SIZE)
-                payload = bytes_read.decode()
-                max_timeouts = MAX_NACK
-            except TimeoutError as _:
-                max_timeouts += 1
-                payload = ERROR
-                address = (str(ERROR),str(ERROR))
-        self.socket_addr = address
-        return payload
-      
-    def start_sender_slow_start(self):
-        set_up_logger()
-        ## esta logica se tendria que pasar a una clase server
-    ## udp_socket = start_new_connection(address)
+
+    def start_sender_stop_and_wait(self):
+        ''' Start sender stop and wait'''
+        logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
         end_of_file = False
         eof_ack = False
-        last_response = default_response()
-      
-        response,end_of_file = self.make_package()
-        res = self.send_package(response)
-        last_response = response
+
+        payloads = self.file_reader.get_packets(1,1)
+        res = self.send_package(payloads[0])
+        last_response = payloads[0]
         
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
-            payload = self.read_from_socket()
+            payload = self.receive_ack()
+            ack,_ = self.decode_packet(payload)
             
-            if is_error(payload):
+            if  ack == -1:
                 logging.error("TIMEOUT on reading, closing socket %s",self.socket_addr)
                 end_of_file = True
                 eof_ack = True
-            elif is_ack(payload):
+            elif ACK == ack:
                   
                 if end_of_file:
                     logging.info("Last ACK recieved from %s",self.socket_addr)
@@ -182,10 +160,10 @@ class Sender:
                 else:
                     logging.info("ACK recieved from %s",self.socket_addr)
                   
-                    response,end_of_file = self.make_package()
-                    res = self.send_package(last_response)
+                    payloads = self.file_reader.get_packets(1,1)
+                    res = self.send_package(payloads[0])
 
-                    if res == ERROR:
+                    if res == -1:
                         end_of_file = True
                         eof_ack = True
                     elif res != len(last_response):
