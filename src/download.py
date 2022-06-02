@@ -23,7 +23,7 @@ def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     #download_file(client ,args.name,args.dst ,addr)
     reciver = Receiver(addr, args.dts, args.name, client)
-    handshake = Handshake('U', args.name, client, addr)
+    handshake = Handshake('D', args.name, client, addr)
     handshake.init_handshake()
     reciver.start_receiver_stop_and_wait()
     client.close()
