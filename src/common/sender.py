@@ -62,7 +62,7 @@ class Sender:
     def init_thread_pool(self, packets):
         ''' Initilices packet threads'''
         threads = {}
-        for i in range(self.base_num, MAX_WINDOW + 1):
+        for i in range(self.base_num, min(MAX_WINDOW + 1, len(packets) + 1)):
             threads[i] = threading.Thread(target=self.repeat,
                                            args=[self.socket, self.socket_addr, packets[i-1]])
             threads[i].start()
