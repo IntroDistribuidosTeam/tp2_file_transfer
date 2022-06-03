@@ -2,7 +2,7 @@ import logging
 import socket
 
 from common.file_writer import FileWriter
-from common.constants import BUFF_SIZE, MAX_NACK, ACK, NOT_EOF, SEC_BASE, ACK_LEN
+from common.constants import BUFF_SIZE, MAX_NACK, ACK, MAX_WINDOW, NOT_EOF, SEC_BASE, ACK_LEN
 
 
 SEQUENCE_NUMBER_BYTES = 2
@@ -40,7 +40,7 @@ class Receiver:
         chunk = payload
         self.recv_base += 1
 
-        while self.recv_buff[self.recv_base] is not None:
+        while self.recv_base in (self.recv_buff).keys():
             chunk += self.recv_buff[self.recv_base]
             self.recv_buff.pop(self.recv_base, None)
             self.recv_base += 1
@@ -82,14 +82,22 @@ class Receiver:
         
         return seq_num, length, eof, payload
         
+    def packet_in_window(self,sequence_number):
+        max_possible_packets = self.recv_base + MAX_WINDOW
+        if (self.recv_base + sequence_number) <= max_possible_packets:
+            return True
+        return False
+
+
     def manage_packet(self, sequence_number, payload):
         '''' Decides if the package has to be stored or wrote '''
         if sequence_number == self.recv_base:
             self.write_file(payload)
             if self.recv_base > int(1 << 16):
                 self.recv_base = 1
-            else:
+            elif self.packet_in_window(sequence_number):
                 self.recv_buff[sequence_number] = payload
+                #TODO: cualquier cosa aca se pisaria el payload si ya lo habiamos recibido y guardado
 
     def start_receiver_selective_repeat(self):
         ''' Selective Repeat RTA'''
@@ -102,6 +110,7 @@ class Receiver:
             bytes_received = self.recv_payload()
             sequence_number, length, eof, payload = self.decode_packet(
                 bytes_received)
+            print('seq: ', sequence_number, ' length:', length, ' eof: ', eof)
 
             if self.is_error(sequence_number):
                 self.file_writer.remove_path()
@@ -115,7 +124,7 @@ class Receiver:
         if error:
             logging.info("Stopped receiving packets due to error")
             return
-
+        print('termino de recibir todo')
         logging.info("Finished uploading file %s from client %s",
                      self.file_writer.get_filename(), self.sender_addr)
 
@@ -129,7 +138,7 @@ class Receiver:
             bytes_received = self.recv_payload()
             print('RECEIVED:', bytes_received)
             _, length, eof, payload = self.decode_packet(bytes_received)
-            print('DEENCODED:', _, 'LEN:', length, 'EOF:', eof, 'PAYLOAD:', payload)
+            print('DEENCODED:', _, 'LEN:', length, 'EOF:', eof)
 
             if self.is_error(_):
                 error = True

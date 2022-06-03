@@ -27,16 +27,17 @@ class FileReader:
         
         with open(self.path, "r", encoding='utf8') as file:
             file.seek(self.seek)
-            for i in range(1, (chunks + 1)):
+            i = 0
+            while i < chunks and not self.eof():
                 payload = file.read(FILE_SIZE)
                 self.seek = file.tell()
                 eof = 1 if self.seek >= self.file_size else 0
                 length = len(payload) + HEADER_SIZE
                 msg = length.to_bytes(2,'big') + (seq_num + i).to_bytes(2,'big') + eof.to_bytes(1,'big') + payload.encode() 
+                print('sequence number: ', seq_num +i)
                 payloads.append(msg)
-                if eof:
-                    break
-        
+                i += 1
+            
         print ('seek ', self.seek, ' y file size ', self.file_size)
 
         return payloads

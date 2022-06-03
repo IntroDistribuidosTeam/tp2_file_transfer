@@ -28,7 +28,7 @@ def main():
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:
         receiver = Receiver(new_addr, args.dst, args.name, client)
-        receiver.start_receiver_stop_and_wait()
+        receiver.start_receiver_selective_repeat()
     client.close()
 
 

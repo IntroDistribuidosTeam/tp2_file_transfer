@@ -25,8 +25,9 @@ def main():
     
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:
+        print ('se instancia el sender')
         sender = Sender(new_addr, args.src, args.name, client)
-        sender.start_sender_stop_and_wait()
+        sender.start_sender_selective_repeat()
     client.close()
 
 if __name__ == "__main__":

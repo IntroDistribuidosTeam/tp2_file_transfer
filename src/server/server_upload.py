@@ -13,8 +13,9 @@ def upload(path, file_name, client_addr: tuple):
     udp_socket.bind(('localhost', 0))
     handshake = Handshake(udp_socket, client_addr)
     handshake.server_handshake()
+    print ('se instancia el receiver')
 
     receiver = Receiver(client_addr, path, file_name, udp_socket)
-    receiver.start_receiver_stop_and_wait()
+    receiver.start_receiver_selective_repeat()
 
     udp_socket.close()

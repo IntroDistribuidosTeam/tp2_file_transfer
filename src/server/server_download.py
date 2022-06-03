@@ -15,6 +15,6 @@ def download(path, file_name, client_addr: tuple):
     handshake.server_handshake()
 
     sender = Sender(client_addr, path, file_name, udp_socket)
-    sender.start_sender_stop_and_wait()
+    sender.start_sender_selective_repeat()
 
     udp_socket.close()

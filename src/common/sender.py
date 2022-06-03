@@ -2,7 +2,7 @@ import logging
 import socket
 import time
 import threading
-from selective_repeat.file_reader import FileReader
+from common.file_reader import FileReader
 from common.constants import ACK, SEC_BASE, MAX_RECV_BYTES, MAX_NACK, MAX_WINDOW, LOG_FORMAT
 
 
@@ -43,9 +43,11 @@ class Sender:
     def repeat(self, socket_udp: socket, addr, packet):
         ''' Re send package if ACK has not been recieved yet'''
  
-        while True:
-            time.sleep(5)
+        t = threading.currentThread()
+        while getattr(t, "do_run", True):
             _ = socket_udp.sendto(packet, addr)
+            time.sleep(1)
+            print('se envio un paquette')
 
     def decode_packet(self,data):
         ''' Decode data in bytes to correct fields '''
@@ -61,59 +63,75 @@ class Sender:
         ''' Initilices packet threads'''
         threads = {}
         for i in range(self.base_num, MAX_WINDOW + 1):
-            threads[i] += threading.Thread(target=self.repeat,
-                                           args=[self.socket, self.socket_addr, packets[i]])
+            threads[i] = threading.Thread(target=self.repeat,
+                                           args=[self.socket, self.socket_addr, packets[i-1]])
+            threads[i].start()
+            print('se crea el hilo para el paquete ',i)
         return threads
 
 
     def get_new_base_num(self, buffer):
         ''' Calculates new base num from ordered buffer'''
-        i = 1
+        i = 0
         keep = True
-        while keep and i < len(buffer):
-            if buffer[i] > (buffer[i-1]+1):
+        while keep and i < (len(buffer) - 1):
+            if (buffer[i] + 1) < (buffer[i+1]):
                 keep = False
-
-        self.base_num = (buffer[i-1]+1)
-        return (i-1)
+            else:
+                i += 1
+        
+        self.base_num = buffer[i] + 1
+        return i + 1
         
     def move_window(self,seq_num,buffer):
         '''Moves buffer window'''
-        if seq_num == self.base_num:
+        if seq_num == self.base_num and not self.file_reader.eof():
                 buffer.sort()
                 move_foward = self.get_new_base_num(buffer=buffer)
-                packets = self.file_reader.get_packets(move_foward, buffer[-1])
+                print('hay q mover', move_foward, ' posiciones')
+                packets = self.file_reader.get_packets(move_foward, self.base_num + MAX_WINDOW - move_foward)
 
-                for i in range(1, len(packets) + 1):
-                    self.window_threads[buffer[-1] + i] += threading.Thread(
-                        target=self.repeat, args=[self.socket, self.socket_addr, packets[i-1]])
-                    buffer.pop(i-1)
+                for i in range(0, len(packets)):
+                    index = self.base_num + MAX_WINDOW - 1
+                    self.window_threads[index + i] = threading.Thread(
+                        target=self.repeat, args=[self.socket, self.socket_addr, packets[i]])
+                    self.window_threads[index + i].start()
+                    buffer.pop(0)
 
     def start_sender_selective_repeat(self):
         '''Starts sender using selective repeat protocol'''
       
         
         buffer = []
-        packets = self.file_reader.get_packets(MAX_WINDOW, self.base_num)
+        packets = self.file_reader.get_packets(MAX_WINDOW, 1)
         self.window_threads = self.init_thread_pool(packets=packets)
 
-        while not self.file_reader.end_of_file():
-
+    
+        while not self.file_reader.eof():
+            print('buffer = ', buffer, ' and window size', self.window_threads)
+            print('esperando ACK')
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
-        
-            buffer.append(seq_num)
-            self.window_threads[seq_num].cancel()
-            self.window_threads.pop(seq_num)
-            self.move_window(seq_num,buffer)
+            print('llego ACK con seq number', seq_num)
+            if seq_num >= self.base_num and seq_num not in buffer:
+                buffer.append(seq_num)
+                print('buffer despues de appendear = ',buffer)
+                print('se elimina thread: ', seq_num)
+                self.window_threads[seq_num].do_run = False
+                self.window_threads[seq_num].join()
+                self.window_threads.pop(seq_num)
+                print('se elimino correctamente')
+                self.move_window(seq_num,buffer)
         
         
         while len(self.window_threads) > 0:
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
-            buffer.append(seq_num)
-            self.window_threads[seq_num].cancel()
-            self.window_threads.pop(seq_num)
+            if seq_num >= self.base_num and seq_num not in buffer:
+                buffer.append(seq_num)
+                self.window_threads[seq_num].do_run = False
+                self.window_threads[seq_num].join()
+                self.window_threads.pop(seq_num)
 
         self.window_threads.clear()
 
