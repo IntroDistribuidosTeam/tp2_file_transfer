@@ -42,7 +42,8 @@ class Server:
             if (request == constants.UPLOAD_CODE):
                 if os.path.exists(full_path):
                     logging.info("File %s uploaded by client %s already exists", filename, client_addr)
-                    skt.sendto((constants.FILE_EXISTS).to_bytes(2, 'big'), client_addr)
+                    msg = (4).to_bytes(2, 'big') + (constants.FILE_EXISTS).to_bytes(2, 'big')
+                    skt.sendto(msg, client_addr)
 
                 else:
                     logging.info('Upload')

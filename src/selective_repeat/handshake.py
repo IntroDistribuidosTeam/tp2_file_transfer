@@ -23,6 +23,9 @@ class Handshake:
                 print('TIMEOUT')
                 attempts += 1
 
+        if int.from_bytes(data[2:], 'big') == 2:
+            return 2, self.socket_addr
+
         if attempts == MAX_NACK:
             return -1, address
 
@@ -32,13 +35,13 @@ class Handshake:
         '''client Handshake'''
         seq_num = 0
         new_addr = self.socket_addr
-        while seq_num != 1:
+        while seq_num != 1 and seq_num != 2:
             bytes_sent = 0
             while bytes_sent != len(msg):
-                bytes_sent += self.socket.sendto(msg, self.socket_addr)
+                bytes_sent = self.socket.sendto(msg, self.socket_addr)
             seq_num, new_addr = self.receive_ack()
-            if seq_num == -1:
-                return self.socket_addr
+            if seq_num == -1 or seq_num == 2:
+                new_addr = self.socket_addr
         return new_addr
 
     def server_handshake(self):
