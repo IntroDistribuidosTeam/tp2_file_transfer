@@ -47,7 +47,6 @@ class Sender:
         while getattr(t, "do_run", True):
             _ = socket_udp.sendto(packet, addr)
             time.sleep(1)
-            print('se envio un paquette')
 
     def decode_packet(self,data):
         ''' Decode data in bytes to correct fields '''
@@ -89,41 +88,35 @@ class Sender:
                 buffer.sort()
                 move_foward = self.get_new_base_num(buffer=buffer)
                 packets = self.file_reader.get_packets(move_foward, self.base_num + MAX_WINDOW - move_foward)
-               # print('hay q mover', move_foward, ' posiciones y la cantidad de paquetes a sumar es ', len(packets), ' para sumar el seq_num ', seq_num, ' y el buffer tiene: ',buffer)
-                print("la cantidad de paquetes a agregar es: ",len(packets))
-                for i in range(0, len(packets)):
+                logging.info('Moving window %s stepts'% move_foward)
+                for i,packet in enumerate(packets):
                     index = self.base_num + MAX_WINDOW - 1
                     self.window_threads[index + i] = threading.Thread(
-                        target=self.repeat, args=[self.socket, self.socket_addr, packets[i]])
+                        target=self.repeat, args=[self.socket, self.socket_addr, packet])
                     self.window_threads[index + i].start()
                     buffer.pop(0)
-        if self.file_reader.eof():
-            print('eof en la funcion con seq_num ', seq_num)
 
     def start_sender_selective_repeat(self):
         '''Starts sender using selective repeat protocol'''
       
-        
         buffer = []
         packets = self.file_reader.get_packets(MAX_WINDOW, 1)
         self.window_threads = self.init_thread_pool(packets=packets)
 
     
         while not self.file_reader.eof():
-            print('buffer = ', buffer, ' and window size', self.window_threads)
-            print('esperando ACK')
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
-            print('llego ACK con seq number', seq_num)
+
             if seq_num >= self.base_num and seq_num not in buffer:
+                logging.info('ACK: %s' % seq_num)
+                logging.info('Deleating thread: %s' % seq_num)
                 buffer.append(seq_num)
-                print('buffer despues de appendear = ',buffer)
-                print('se elimina thread: ', seq_num)
                 self.window_threads[seq_num].do_run = False
                 self.window_threads[seq_num].join()
                 self.window_threads.pop(seq_num)
-                print('se elimino correctamente')
                 self.move_window(seq_num,buffer)
+
         
         
         while len(self.window_threads) > 0:
@@ -134,7 +127,7 @@ class Sender:
                 self.window_threads[seq_num].do_run = False
                 self.window_threads[seq_num].join()
                 self.window_threads.pop(seq_num)
-
+        logging.info("File sent, cleaning window.")
         self.window_threads.clear()
 
     def send_package(self, response):
@@ -161,31 +154,27 @@ class Sender:
         payloads = self.file_reader.get_packets(1, 0)
         end_of_file = self.file_reader.eof()
         res = self.send_package(payloads[0])
-        print('PAYLOAD:', payloads[0])
+
         
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
-            print('ANTES DE ACK')
+ 
             packet = self.receive_ack()
-            print('RECEIVED:', packet)
             _, ack = self.decode_packet(packet)
-            print('DECODED:', ack, 'SEQ:', _)
 
-            
             if  ack == -1:
-                logging.error("TIMEOUT on reading, closing socket %s", self.socket_addr)
+                logging.error("TIMEOUT on reading, closing socket %s" % self.socket_addr)
                 end_of_file = True
                 eof_ack = True
             elif ACK == ack:
                   
                 if end_of_file:
-                    logging.info("Last ACK recieved from %s", self.socket_addr)
+                    logging.info("Last ACK recieved from %s" %self.socket_addr)
                     eof_ack = True
-                    print("LLEGO ultimo ACK")
+                    
                 else:
-                    logging.info("ACK recieved from %s", self.socket_addr)
-
+                    logging.info("ACK recieved from %s" % self.socket_addr)
                     payloads = self.file_reader.get_packets(1, 0)
                     res = self.send_package(payloads[0])
 
@@ -195,8 +184,8 @@ class Sender:
                         end_of_file = True
                         eof_ack = True
                     else:
-                        logging.info("PACKET sent to %s".format(self.socket_addr))
-                        print('PAYLOAD:', payloads[0])
+                        logging.info("PACKET sent to %s",self.socket_addr)
+                        
 
         print ("termino de subir toodo")
 

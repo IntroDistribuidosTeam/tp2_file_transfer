@@ -1,9 +1,13 @@
 import logging
 import socket
-from common.constants import TIMEOUT
+from common.constants import TIMEOUT,UPLOAD_CODE
 from common.parser import parse_client_upload_arguments
 from common.sender import Sender
 from common.handshake import Handshake
+
+def make_upload_package(file_name):
+    msg = UPLOAD_CODE.encode() + file_name.encode()
+    return msg
 
 def main():
     args = parse_client_upload_arguments()
@@ -21,7 +25,7 @@ def main():
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
     
-    msg = 'U'.encode() + args.name.encode()
+    msg = make_upload_package(args.name)
     
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:

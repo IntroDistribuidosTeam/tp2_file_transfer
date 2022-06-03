@@ -25,7 +25,7 @@ class FileReader:
         '''Returns a total of packets read from file '''
         payloads = []
         
-        with open(self.path, "r", encoding='utf8') as file:
+        with open(self.path, "rb") as file:
             file.seek(self.seek)
             i = 0
             while i < chunks and not self.eof():
@@ -33,12 +33,9 @@ class FileReader:
                 self.seek = file.tell()
                 eof = 1 if self.seek >= self.file_size else 0
                 length = len(payload) + HEADER_SIZE
-                msg = length.to_bytes(2,'big') + (seq_num + i).to_bytes(2,'big') + eof.to_bytes(1,'big') + payload.encode() 
-                print('sequence number: ', seq_num +i)
+                msg = length.to_bytes(2,'big') + (seq_num + i).to_bytes(2,'big') + eof.to_bytes(1,'big') + payload 
                 payloads.append(msg)
                 i += 1
             
-        print ('seek ', self.seek, ' y file size ', self.file_size)
-
         return payloads
  

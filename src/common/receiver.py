@@ -60,9 +60,8 @@ class Receiver:
         while bytes_sent != 4 and timeout_counter < MAX_NACK:
             try:
                 response = (ACK_LEN).to_bytes(2, 'big') + sequence_number.to_bytes(2, 'big')
-                print('SENDER ADDRESS', self.sender_addr)
                 bytes_sent = self.socket.sendto(response, self.sender_addr)
-                print('ENVIADO:', response, 'BYTES_SENT:', bytes_sent)
+        
             except socket.timeout:
                 timeout_counter += 1
 
@@ -78,7 +77,7 @@ class Receiver:
         length = int.from_bytes(bytes_recieved[:2],'big')
         seq_num = int.from_bytes(bytes_recieved[2:4],'big')
         eof = int.from_bytes(bytes_recieved[4:5],'big')
-        payload = bytes_recieved[5:].decode()
+        payload = bytes_recieved[5:]
         
         return seq_num, length, eof, payload
         
@@ -110,7 +109,7 @@ class Receiver:
             bytes_received = self.recv_payload()
             sequence_number, length, eof, payload = self.decode_packet(
                 bytes_received)
-            print('seq: ', sequence_number, ' length:', length, ' eof: ', eof)
+            
 
             if self.is_error(sequence_number):
                 self.file_writer.remove_path()
@@ -124,9 +123,8 @@ class Receiver:
         if error:
             logging.info("Stopped receiving packets due to error")
             return
-        print('termino de recibir todo')
-        logging.info("Finished uploading file %s from client %s",
-                     self.file_writer.get_filename(), self.sender_addr)
+        
+        logging.info("Finished uploading file {} from client {}".format(self.file_writer.get_filename(), self.sender_addr))
 
     def start_receiver_stop_and_wait(self):
         ''' Stop and Wait RTA '''
@@ -136,16 +134,15 @@ class Receiver:
 
         while eof == NOT_EOF and not error:
             bytes_received = self.recv_payload()
-            print('RECEIVED:', bytes_received)
+       
             _, length, eof, payload = self.decode_packet(bytes_received)
-            print('DEENCODED:', _, 'LEN:', length, 'EOF:', eof)
+        
 
             if self.is_error(_):
                 error = True
                 self.file_writer.remove_path()
             elif length == len(bytes_received):
                 self.file_writer.write(payload)
-                print('ESCRIBI BIEN GIL')
                 error = self.send_response(ACK)
 
         if error:
