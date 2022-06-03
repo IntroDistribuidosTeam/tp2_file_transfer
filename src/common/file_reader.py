@@ -37,7 +37,6 @@ class FileReader:
                 if eof:
                     break
         
-        print ('seek ', self.seek, ' y file size ', self.file_size)
 
         return payloads
  

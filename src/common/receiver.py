@@ -27,6 +27,7 @@ class Receiver:
             try:
                 bytes_recv, _ = self.socket.recvfrom(BUFF_SIZE)
             except socket.timeout as _:
+                self.send_response(self.last_packet_acked)
                 timeout_counter += 1
 
         if timeout_counter == MAX_NACK:
@@ -54,21 +55,8 @@ class Receiver:
     def send_response(self, sequence_number):
         '''Sends ack for packet received'''
 
-        bytes_sent = 0
-        timeout_counter = 0
-
-        while bytes_sent != 4 and timeout_counter < MAX_NACK:
-            try:
-                response = (ACK_LEN).to_bytes(2, 'big') + sequence_number.to_bytes(2, 'big')
-                print('SENDER ADDRESS', self.sender_addr)
-                bytes_sent = self.socket.sendto(response, self.sender_addr)
-                print('ENVIADO:', response, 'BYTES_SENT:', bytes_sent)
-            except socket.timeout:
-                timeout_counter += 1
-
-        if timeout_counter == MAX_NACK:
-            return True
-        return False
+        response = (ACK_LEN).to_bytes(2, 'big') + sequence_number.to_bytes(2, 'big')
+        self.socket.sendto(response, self.sender_addr)
 
     def decode_packet(self,bytes_recieved):
         ''' Make correct fields from bytes package'''
@@ -111,6 +99,7 @@ class Receiver:
                 error = self.send_response(sequence_number)
                 if not error:
                     self.manage_packet(sequence_number, payload)
+                    
 
         if error:
             logging.info("Stopped receiving packets due to error")
@@ -121,27 +110,32 @@ class Receiver:
 
     def start_receiver_stop_and_wait(self):
         ''' Stop and Wait RTA '''
+        print('comienza a recibir')
 
         eof = NOT_EOF
+        contador = 0
         error = False
+        self.last_packet_acked = 0
+        self.expected_seq = 1
 
         while eof == NOT_EOF and not error:
             bytes_received = self.recv_payload()
-            print('RECEIVED:', bytes_received)
-            _, length, eof, payload = self.decode_packet(bytes_received)
-            print('DEENCODED:', _, 'LEN:', length, 'EOF:', eof, 'PAYLOAD:', payload)
-
-            if self.is_error(_):
+            seq_num, length, eof, payload = self.decode_packet(bytes_received)
+            print('llega: ', seq_num,' esperamos: ', self.expected_seq, ' y el ultimo que reconocimos es: ', self.last_packet_acked )
+            if self.is_error(seq_num):
                 error = True
                 self.file_writer.remove_path()
-            elif length == len(bytes_received):
+            elif length == len(bytes_received) and seq_num == self.expected_seq:
                 self.file_writer.write(payload)
-                print('ESCRIBI BIEN GIL')
-                error = self.send_response(ACK)
+                contador += 1
+                print("contador: ", contador, 'from: ', self.sender_addr)
+                self.send_response(self.expected_seq)
+                self.last_packet_acked = (self.last_packet_acked + 1) % 2
+                self.expected_seq = (self.expected_seq + 1) % 2
 
-        if error:
-            logging.info("Stopped receiving packets due to error")
-            return
+
+            elif length == len(bytes_received) and seq_num == self.last_packet_acked:
+                 self.send_response(self.last_packet_acked)
 
         print ("termino de recibir todo")
         logging.info("Finished receiving file %s from client %s",

@@ -29,6 +29,7 @@ class Sender:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
             except socket.timeout as _:
                 print('TIMEOUT')
+                self.send_package(self.last_packet_sent)
                 timeout_counter += 1
 
         if timeout_counter == MAX_NACK:
@@ -36,7 +37,6 @@ class Sender:
 
         if self.socket_addr != address:
             self.socket_addr = address
-        
         return data
         
     
@@ -92,7 +92,6 @@ class Sender:
     def start_sender_selective_repeat(self):
         '''Starts sender using selective repeat protocol'''
       
-        
         buffer = []
         packets = self.file_reader.get_packets(MAX_WINDOW, self.base_num)
         self.window_threads = self.init_thread_pool(packets=packets)
@@ -119,55 +118,54 @@ class Sender:
 
     def send_package(self, response):
         ''' Attemps to send the response for max_nack times'''
-        max_timeouts = 0
-        while max_timeouts < MAX_NACK:
-            try:
-                res = self.socket.sendto(response, self.socket_addr)
-                max_timeouts = MAX_NACK
-            except socket.timeout as _:
-                max_timeouts += 1
-                res = -1
-
-        return res
-
+        print('enviamos el paquete')
+        return self.socket.sendto(response, self.socket_addr)
+    
 
     def start_sender_stop_and_wait(self):
         ''' Start sender stop and wait'''
         logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+        print('comienza a mandar')
 
         end_of_file = False
         eof_ack = False
+        contador = 0
+        self.last_seq_acked = 0
+        self.expected_ack = 1
 
-        payloads = self.file_reader.get_packets(1, 0)
+        payloads = self.file_reader.get_packets(1, self.expected_ack - 1)
         end_of_file = self.file_reader.eof()
         res = self.send_package(payloads[0])
-        print('PAYLOAD:', payloads[0])
-        
+        contador += 1
+
+        self.last_packet_sent = payloads[0]
+        print('contador: ',contador)
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
-            print('ANTES DE ACK')
-            packet = self.receive_ack()
-            print('RECEIVED:', packet)
-            _, ack = self.decode_packet(packet)
-            print('DECODED:', ack, 'SEQ:', _)
-
             
+            packet = self.receive_ack()
+            _, ack = self.decode_packet(packet)
+
             if  ack == -1:
                 logging.error("TIMEOUT on reading, closing socket %s", self.socket_addr)
                 end_of_file = True
                 eof_ack = True
-            elif ACK == ack:
+            elif self.expected_ack == ack:
                   
                 if end_of_file:
                     logging.info("Last ACK recieved from %s", self.socket_addr)
                     eof_ack = True
-                    print("LLEGO ultimo ACK")
                 else:
                     logging.info("ACK recieved from %s", self.socket_addr)
 
-                    payloads = self.file_reader.get_packets(1, 0)
+                    self.last_seq_acked = self.expected_ack
+                    self.expected_ack = (self.expected_ack + 1) % 2
+                    payloads = self.file_reader.get_packets(1,self.expected_ack - 1)
                     res = self.send_package(payloads[0])
+                    contador += 1
+                    self.last_packet_sent = payloads[0]
+                    print('contador: ',contador)
 
                     end_of_file = self.file_reader.eof()
 
@@ -176,8 +174,10 @@ class Sender:
                         eof_ack = True
                     else:
                         logging.info("PACKET sent to %s".format(self.socket_addr))
-                        print('PAYLOAD:', payloads[0])
 
-        print ("termino de subir toodo")
+            elif self.last_seq_acked == ack:
+                    res = self.send_package(self.last_packet_sent)
+
+
 
         logging.info("Socket closed.")

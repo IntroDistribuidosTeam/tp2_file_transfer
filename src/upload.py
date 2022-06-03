@@ -17,7 +17,6 @@ def main():
 
     logging.basicConfig(level=log_level, format="%(message)s")
 
-    print(args)
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
@@ -26,7 +25,6 @@ def main():
     
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:
-        sleep(10)
         sender = Sender(new_addr, args.src, args.name, client)
         sender.start_sender_stop_and_wait()
     client.close()

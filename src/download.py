@@ -18,7 +18,6 @@ def main():
     logging.basicConfig(level=log_level, format="%(message)s")
 
 
-    print(args)
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
