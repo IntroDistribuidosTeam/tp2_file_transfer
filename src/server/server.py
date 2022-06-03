@@ -4,6 +4,7 @@ import sys
 import socket
 import os.path
 import server.server_upload as server_upload
+import server.server_download as server_download
 from common import constants
 
 
@@ -38,8 +39,8 @@ class Server:
 
             if (request == constants.UPLOAD_CODE):
                 if os.path.exists(full_path):
-                    logging.info("File %s uploaded by client %s already exists", filename, client_addr)
-                    msg = (4).to_bytes(2, 'big') + (constants.FILE_EXISTS).to_bytes(2, 'big')
+                    logging.error("File %s expected to be uploaded by client %s already exists", filename, client_addr)
+                    msg = (4).to_bytes(2, 'big') + (constants.FILE_PROBLEM).to_bytes(2, 'big')
                     skt.sendto(msg, client_addr)
 
                 else:
@@ -47,5 +48,11 @@ class Server:
                     server_upload.upload(full_path, filename, client_addr)
 
             else:
-                print(" entro al download mode")
-                logging.info('Upload')
+                if not os.path.exists(full_path):
+                    logging.error("File %s expected to be downloaded by client %s does no exist", filename, client_addr)
+                    msg = (constants.ACK_LEN).to_bytes(2, 'big') + (constants.FILE_PROBLEM).to_bytes(2, 'big')
+                    skt.sendto(msg, client_addr)
+
+                else:
+                    logging.info('Download')
+                    server_download.download(full_path, filename, client_addr)

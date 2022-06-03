@@ -1,7 +1,7 @@
 import logging
 import socket
+from common.constants import TIMEOUT
 from common.parser import parse_client_download_arguments
-from client.client_download import download_file
 from selective_repeat.receiver import Receiver
 from selective_repeat.handshake import Handshake
 
@@ -19,12 +19,16 @@ def main():
 
 
     print(args)
-    #RUN CLIENT
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    receiver = Receiver(addr, args.dts, args.name, client)
+    client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
-    handshake.init_handshake()
-    receiver.start_receiver_stop_and_wait()
+
+    msg = 'D'.encode() + args.name.encode()
+
+    new_addr = handshake.client_handshake(msg)
+    if new_addr != addr:
+        receiver = Receiver(new_addr, args.dst, args.name, client)
+        receiver.start_receiver_stop_and_wait()
     client.close()
 
 

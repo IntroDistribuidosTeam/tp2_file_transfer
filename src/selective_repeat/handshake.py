@@ -1,6 +1,6 @@
 import socket
 import logging
-from common.constants import ACK_LEN, MAX_NACK, MAX_RECV_BYTES, ACK
+from common.constants import ACK_LEN, MAX_NACK, MAX_RECV_BYTES, ACK, FILE_PROBLEM
 
 # inicia la comunicacion
 class Handshake:
@@ -23,8 +23,8 @@ class Handshake:
                 print('TIMEOUT')
                 attempts += 1
 
-        if int.from_bytes(data[2:], 'big') == 2:
-            return 2, self.socket_addr
+        if int.from_bytes(data[2:], 'big') == FILE_PROBLEM:
+            return FILE_PROBLEM, self.socket_addr
 
         if attempts == MAX_NACK:
             return -1, address
@@ -35,12 +35,12 @@ class Handshake:
         '''client Handshake'''
         seq_num = 0
         new_addr = self.socket_addr
-        while seq_num != 1 and seq_num != 2:
+        while seq_num != ACK and seq_num != FILE_PROBLEM:
             bytes_sent = 0
             while bytes_sent != len(msg):
                 bytes_sent = self.socket.sendto(msg, self.socket_addr)
             seq_num, new_addr = self.receive_ack()
-            if seq_num == -1 or seq_num == 2:
+            if seq_num == -1 or seq_num == FILE_PROBLEM:
                 new_addr = self.socket_addr
         return new_addr
 
