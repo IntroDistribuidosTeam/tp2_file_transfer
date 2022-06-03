@@ -139,7 +139,7 @@ class Receiver:
             elif length == len(bytes_received):
                 self.file_writer.write(payload)
                 error = self.send_response(ACK)
-        if len(self.recv_buff) > 0:
+        
         if error:
             logging.info("Stopped receiving packets due to error")
             return
