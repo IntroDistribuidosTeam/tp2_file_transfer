@@ -165,7 +165,8 @@ class Sender:
                     print("LLEGO ultimo ACK")
                 else:
                     logging.info("ACK recieved from %s", self.socket_addr)
-                  
+
+                    payloads = self.file_reader.get_packets(1, 0)
                     res = self.send_package(payloads[0])
 
                     end_of_file = self.file_reader.eof()
@@ -175,6 +176,8 @@ class Sender:
                         eof_ack = True
                     else:
                         logging.info("PACKET sent to %s".format(self.socket_addr))
-                        payloads = self.file_reader.get_packets(1, 0)
+                        print('PAYLOAD:', payloads[0])
+
+        print ("termino de subir toodo")
 
         logging.info("Socket closed.")

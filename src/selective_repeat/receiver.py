@@ -143,5 +143,6 @@ class Receiver:
             logging.info("Stopped receiving packets due to error")
             return
 
+        print ("termino de recibir todo")
         logging.info("Finished receiving file %s from client %s",
                      self.file_writer.get_filename(), self.sender_addr)

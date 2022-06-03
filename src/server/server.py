@@ -27,17 +27,14 @@ class Server:
 
 
         while True:
-            msg, client_addr = skt.recvfrom(constants.MAX_RECV_BYTES)
+            msg, client_addr = skt.recvfrom(constants.BUFF_SIZE)
 
-            print("se recibió %s de por parte del cliente %s", msg.decode(), client_addr)
-            
             request = msg.decode()[0]
             filename = msg.decode()[1:]
 
             full_path = self.storage_dir + '/' + filename
             if self.storage_dir[-1] == '/':
-                full_path = self.storage_dir + request['filename']
-
+                full_path = self.storage_dir + filename
 
             if (request == constants.UPLOAD_CODE):
                 if os.path.exists(full_path):

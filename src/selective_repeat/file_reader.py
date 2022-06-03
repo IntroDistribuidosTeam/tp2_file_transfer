@@ -1,6 +1,6 @@
 from os import path, stat
 import os
-from common.constants import BUFF_SIZE
+from common.constants import BUFF_SIZE, FILE_SIZE
 
 
 DELIMETER = '/'
@@ -31,14 +31,16 @@ class FileReader:
         with open(self.path, "r", encoding='utf8') as file:
             file.seek(self.seek)
             for i in range(1, (chunks + 1)):
-                payload = file.read(BUFF_SIZE)
+                payload = file.read(FILE_SIZE)
                 self.seek = file.tell()
-                eof = 1 if self.seek == self.file_size else 0 
+                eof = 1 if self.seek >= self.file_size else 0
                 length = len(payload) + HEADER
                 msg = length.to_bytes(2,'big') + (seq_num + i).to_bytes(2,'big') + eof.to_bytes(1,'big') + payload.encode() 
                 payloads.append(msg)
                 if eof:
                     break
+        
+        print ('seek ', self.seek, ' y file size ', self.file_size)
 
         return payloads
  

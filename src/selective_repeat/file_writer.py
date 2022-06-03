@@ -17,7 +17,7 @@ class FileWriter:
 
     def write(self,chunk):
         ''' Writes chunk in file '''
-        with open(self.file_path, 'w', encoding="utf8") as file:
+        with open(self.file_path, 'a', encoding="utf8") as file:
             file.write(chunk)
     
     def remove_path(self):
