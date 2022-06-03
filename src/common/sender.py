@@ -28,7 +28,6 @@ class Sender:
             try:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
             except socket.timeout as _:
-                print('TIMEOUT')
                 self.send_package(self.last_packet_sent)
                 timeout_counter += 1
 
@@ -118,14 +117,12 @@ class Sender:
 
     def send_package(self, response):
         ''' Attemps to send the response for max_nack times'''
-        print('enviamos el paquete')
         return self.socket.sendto(response, self.socket_addr)
     
 
     def start_sender_stop_and_wait(self):
         ''' Start sender stop and wait'''
         logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-        print('comienza a mandar')
 
         end_of_file = False
         eof_ack = False
@@ -139,7 +136,6 @@ class Sender:
         contador += 1
 
         self.last_packet_sent = payloads[0]
-        print('contador: ',contador)
         while not end_of_file or not eof_ack:
             # si salta el timeout por parte de la lectura cierro socket
             # porque es responsabilidad del cliente de reenviarmelo por timeout
@@ -165,7 +161,6 @@ class Sender:
                     res = self.send_package(payloads[0])
                     contador += 1
                     self.last_packet_sent = payloads[0]
-                    print('contador: ',contador)
 
                     end_of_file = self.file_reader.eof()
 

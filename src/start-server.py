@@ -7,8 +7,6 @@ def main():
     args = parse_server_arguments()
     addr = (args.own_host, args.own_port)
 
-    print("args passed: host: %s port: %s",args.own_host, args.own_port)
-
     if args.verbose:
         log_level = logging.DEBUG
     else:

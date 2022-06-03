@@ -110,7 +110,6 @@ class Receiver:
 
     def start_receiver_stop_and_wait(self):
         ''' Stop and Wait RTA '''
-        print('comienza a recibir')
 
         eof = NOT_EOF
         contador = 0
@@ -121,14 +120,12 @@ class Receiver:
         while eof == NOT_EOF and not error:
             bytes_received = self.recv_payload()
             seq_num, length, eof, payload = self.decode_packet(bytes_received)
-            print('llega: ', seq_num,' esperamos: ', self.expected_seq, ' y el ultimo que reconocimos es: ', self.last_packet_acked )
             if self.is_error(seq_num):
                 error = True
                 self.file_writer.remove_path()
             elif length == len(bytes_received) and seq_num == self.expected_seq:
                 self.file_writer.write(payload)
                 contador += 1
-                print("contador: ", contador, 'from: ', self.sender_addr)
                 self.send_response(self.expected_seq)
                 self.last_packet_acked = (self.last_packet_acked + 1) % 2
                 self.expected_seq = (self.expected_seq + 1) % 2
@@ -137,6 +134,5 @@ class Receiver:
             elif length == len(bytes_received) and seq_num == self.last_packet_acked:
                  self.send_response(self.last_packet_acked)
 
-        print ("termino de recibir todo")
         logging.info("Finished receiving file %s from client %s",
                      self.file_writer.get_filename(), self.sender_addr)

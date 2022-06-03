@@ -19,10 +19,8 @@ class Handshake:
         while attempts < MAX_NACK and data == -1:
             try:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
-                print('Se recibio la respuesta')
 
             except socket.timeout as _:
-                print('TIMEOUT no se obtuvo respuesta')
 
                 self.socket.sendto(msg, self.socket_addr)
 
@@ -44,12 +42,9 @@ class Handshake:
         new_addr = self.socket_addr
         while seq_num != ACK and seq_num != FILE_PROBLEM:
             self.socket.sendto(msg, self.socket_addr)
-            print('Se mando el ack del cliente')
             seq_num, new_addr = self.receive_ack(msg)
-            print('se recibio ', seq_num, ' del servidor ')
             if seq_num == -1 or seq_num == FILE_PROBLEM:
                 new_addr = self.socket_addr
-        print ('termino el handshake')
 
         return new_addr
 
@@ -60,8 +55,6 @@ class Handshake:
         ack_package = (ACK_LEN).to_bytes(2, 'big') + ACK.to_bytes(2, 'big')
 
         res = self.socket.sendto(ack_package, self.socket_addr)
-        print('Se mando el ack del servidor')
         while res != ACK_LEN:
             logging.error("Coudn't sent ACK to: %s ", self.socket_addr)
             res = self.socket.sendto(ack_package, self.socket_addr)
-        print ('termino el handshake')
