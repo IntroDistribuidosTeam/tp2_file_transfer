@@ -1,5 +1,6 @@
 import logging
 import socket
+import os
 from common.constants import TIMEOUT,UPLOAD_CODE
 from common.parser import parse_client_upload_arguments
 from common.sender import Sender
@@ -21,6 +22,9 @@ def main():
     logging.basicConfig(level=log_level, format="%(message)s")
 
     print(args)
+    if not os.path.exists(args.src):
+        logging.error("File expected to be uploaded does not exist.")
+        return
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)

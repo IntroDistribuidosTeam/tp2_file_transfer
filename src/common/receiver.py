@@ -83,7 +83,7 @@ class Receiver:
         
     def packet_in_window(self,sequence_number):
         max_possible_packets = self.recv_base + MAX_WINDOW
-        if (self.recv_base + sequence_number) <= max_possible_packets:
+        if (self.recv_base + sequence_number) < max_possible_packets:
             return True
         return False
 
@@ -92,11 +92,8 @@ class Receiver:
         '''' Decides if the package has to be stored or wrote '''
         if sequence_number == self.recv_base:
             self.write_file(payload)
-            if self.recv_base > int(1 << 16):
-                self.recv_base = 1
-            elif self.packet_in_window(sequence_number):
-                self.recv_buff[sequence_number] = payload
-                #TODO: cualquier cosa aca se pisaria el payload si ya lo habiamos recibido y guardado
+        elif self.packet_in_window(sequence_number):
+            self.recv_buff[sequence_number] = payload
 
     def start_receiver_selective_repeat(self):
         ''' Selective Repeat RTA'''
@@ -109,7 +106,7 @@ class Receiver:
             bytes_received = self.recv_payload()
             sequence_number, length, eof, payload = self.decode_packet(
                 bytes_received)
-            
+            print('me llega ack del seq num: ', sequence_number)
 
             if self.is_error(sequence_number):
                 self.file_writer.remove_path()
@@ -117,7 +114,9 @@ class Receiver:
 
             elif len(bytes_received) == length:
                 error = self.send_response(sequence_number)
-                if not error:
+
+                if sequence_number >= self.recv_base and not error:
+                    print('llamamos a manage packet')
                     self.manage_packet(sequence_number, payload)
 
         if error:

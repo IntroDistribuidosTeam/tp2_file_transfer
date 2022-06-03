@@ -107,6 +107,8 @@ class Sender:
         while not self.file_reader.eof():
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
+            print('me llega ack del seq num: ', seq_num)
+
 
             if seq_num >= self.base_num and seq_num not in buffer:
                 logging.info('ACK: %s' % seq_num)

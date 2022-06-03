@@ -24,6 +24,9 @@ def main():
 
 
     print(args)
+    if os.path.exists(args.dst):
+        logging.error("Destination for file expected to be downloaded already exists.")
+        return
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
