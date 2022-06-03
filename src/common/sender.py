@@ -85,18 +85,20 @@ class Sender:
         
     def move_window(self,seq_num,buffer):
         '''Moves buffer window'''
-        if seq_num == self.base_num and not self.file_reader.eof():
+        if seq_num == self.base_num:
                 buffer.sort()
                 move_foward = self.get_new_base_num(buffer=buffer)
-                print('hay q mover', move_foward, ' posiciones')
                 packets = self.file_reader.get_packets(move_foward, self.base_num + MAX_WINDOW - move_foward)
-
+               # print('hay q mover', move_foward, ' posiciones y la cantidad de paquetes a sumar es ', len(packets), ' para sumar el seq_num ', seq_num, ' y el buffer tiene: ',buffer)
+                print("la cantidad de paquetes a agregar es: ",len(packets))
                 for i in range(0, len(packets)):
                     index = self.base_num + MAX_WINDOW - 1
                     self.window_threads[index + i] = threading.Thread(
                         target=self.repeat, args=[self.socket, self.socket_addr, packets[i]])
                     self.window_threads[index + i].start()
                     buffer.pop(0)
+        if self.file_reader.eof():
+            print('eof en la funcion con seq_num ', seq_num)
 
     def start_sender_selective_repeat(self):
         '''Starts sender using selective repeat protocol'''
