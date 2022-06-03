@@ -17,7 +17,6 @@ class Server:
     def start_server(self):
         skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         skt.bind(self.addr)
-        print("Socket escuchando")
 
         threads = []
 

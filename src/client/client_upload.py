@@ -46,7 +46,6 @@ def upload_file(client, addr, file_src, file_name , logger):
     if int(response) == FILE_EXISTS:
         logger.info("A file with name %s already exists",file_name)
         file.close()
-        print("llega un file Exists")
         return FILE_EXISTS
 
     # envio resto mensajes

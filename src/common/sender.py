@@ -28,7 +28,6 @@ class Sender:
             try:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
             except socket.timeout as _:
-                print('TIMEOUT')
                 timeout_counter += 1
 
         if timeout_counter == MAX_NACK:
@@ -65,22 +64,21 @@ class Sender:
             threads[i] = threading.Thread(target=self.repeat,
                                            args=[self.socket, self.socket_addr, packets[i-1]])
             threads[i].start()
-            print('se crea el hilo para el paquete ',i)
         return threads
 
 
     def get_new_base_num(self, buffer):
         ''' Calculates new base num from ordered buffer'''
-        i = 0
+        i = buffer.index(self.base_num)
         keep = True
         while keep and i < (len(buffer) - 1):
             if (buffer[i] + 1) < (buffer[i+1]):
                 keep = False
             else:
                 i += 1
-        
+        x = self.base_num
         self.base_num = buffer[i] + 1
-        return i + 1
+        return self.base_num - x
         
     def move_window(self,seq_num,buffer):
         '''Moves buffer window'''
@@ -90,11 +88,11 @@ class Sender:
                 packets = self.file_reader.get_packets(move_foward, self.base_num + MAX_WINDOW - move_foward)
                 logging.info('Moving window %s stepts'% move_foward)
                 for i,packet in enumerate(packets):
-                    index = self.base_num + MAX_WINDOW - 1
+                    index = self.base_num + MAX_WINDOW - move_foward 
                     self.window_threads[index + i] = threading.Thread(
                         target=self.repeat, args=[self.socket, self.socket_addr, packet])
                     self.window_threads[index + i].start()
-                    buffer.pop(0)
+                    
 
     def start_sender_selective_repeat(self):
         '''Starts sender using selective repeat protocol'''
@@ -107,9 +105,7 @@ class Sender:
         while not self.file_reader.eof():
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
-            print('me llega ack del seq num: ', seq_num)
-
-
+           
             if seq_num >= self.base_num and seq_num not in buffer:
                 logging.info('ACK: %s' % seq_num)
                 logging.info('Deleating thread: %s' % seq_num)
@@ -118,13 +114,14 @@ class Sender:
                 self.window_threads[seq_num].join()
                 self.window_threads.pop(seq_num)
                 self.move_window(seq_num,buffer)
-
-        
+       
         
         while len(self.window_threads) > 0:
             bytes_received = self.receive_ack()
             _, seq_num = self.decode_packet(bytes_received)
-            if seq_num >= self.base_num and seq_num not in buffer:
+            if seq_num == -1:
+                break
+            if seq_num not in buffer:
                 buffer.append(seq_num)
                 self.window_threads[seq_num].do_run = False
                 self.window_threads[seq_num].join()
@@ -188,7 +185,5 @@ class Sender:
                     else:
                         logging.info("PACKET sent to %s",self.socket_addr)
                         
-
-        print ("termino de subir toodo")
 
         logging.info("Socket closed.")

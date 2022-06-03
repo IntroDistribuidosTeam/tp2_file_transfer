@@ -21,7 +21,6 @@ def write_piece(file_name, mode, piece):
     try:
         with open(file_name, mode,encoding='utf-8') as file:
             s = file.write(piece)
-            print("escribio: %i bytes", s)
     except FileNotFoundError as _:
         logging.error("Error: Could not write in file")
 
@@ -41,7 +40,6 @@ def get_payload(bytes_read):
     payload = bytes_read.decode()
     eof = EOF if int(payload[0]) == EOF else NOT_EOF
     
-    print(eof)
     return eof,payload[2:]
 
 
@@ -80,7 +78,6 @@ def download_file(client, file_name, path, addr: tuple):
         write_piece(path, MODE_ADD,payload)
         logging.info("Success: Piece %s of the file downloaded", count_pieces)
 
-    print("enviando el ultimo ACK")
     send_ack(client, addr)
 
     client.close()

@@ -23,7 +23,6 @@ def main():
     logging.basicConfig(level=log_level, format=LOG_FORMAT)
 
 
-    print(args)
     if os.path.exists(args.dst):
         logging.error("Destination for file expected to be downloaded already exists.")
         return

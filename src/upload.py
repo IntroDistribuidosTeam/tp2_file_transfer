@@ -21,7 +21,6 @@ def main():
 
     logging.basicConfig(level=log_level, format="%(message)s")
 
-    print(args)
     if not os.path.exists(args.src):
         logging.error("File expected to be uploaded does not exist.")
         return
@@ -33,7 +32,6 @@ def main():
     
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:
-        print ('se instancia el sender')
         sender = Sender(new_addr, args.src, args.name, client)
         sender.start_sender_selective_repeat()
     client.close()

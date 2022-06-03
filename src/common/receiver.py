@@ -92,7 +92,7 @@ class Receiver:
         '''' Decides if the package has to be stored or wrote '''
         if sequence_number == self.recv_base:
             self.write_file(payload)
-        elif self.packet_in_window(sequence_number):
+        elif self.packet_in_window(sequence_number) and sequence_number not in (self.recv_buff).keys():
             self.recv_buff[sequence_number] = payload
 
     def start_receiver_selective_repeat(self):
@@ -106,7 +106,6 @@ class Receiver:
             bytes_received = self.recv_payload()
             sequence_number, length, eof, payload = self.decode_packet(
                 bytes_received)
-            print('me llega ack del seq num: ', sequence_number)
 
             if self.is_error(sequence_number):
                 self.file_writer.remove_path()
@@ -116,7 +115,6 @@ class Receiver:
                 error = self.send_response(sequence_number)
 
                 if sequence_number >= self.recv_base and not error:
-                    print('llamamos a manage packet')
                     self.manage_packet(sequence_number, payload)
 
         if error:
@@ -131,23 +129,21 @@ class Receiver:
         eof = NOT_EOF
         error = False
 
-        while eof == NOT_EOF and not error:
+        while not error:
             bytes_received = self.recv_payload()
        
             _, length, eof, payload = self.decode_packet(bytes_received)
-        
-
+    
             if self.is_error(_):
                 error = True
-                self.file_writer.remove_path()
             elif length == len(bytes_received):
                 self.file_writer.write(payload)
                 error = self.send_response(ACK)
-
+        if len(self.recv_buff) > 0:
         if error:
             logging.info("Stopped receiving packets due to error")
             return
-
-        print ("termino de recibir todo")
         logging.info("Finished receiving file %s from client %s",
                      self.file_writer.get_filename(), self.sender_addr)
+
+
