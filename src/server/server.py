@@ -6,6 +6,7 @@ import os.path
 import server.server_upload as server_upload
 import server.server_download as server_download
 from common import constants
+from threading import Thread
 
 
 class Server:
@@ -17,17 +18,21 @@ class Server:
         skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         skt.bind(self.addr)
         print("Socket escuchando")
+        threads = []
 
         def signal_handler(sig, frame):
             logging.info("Signal %s in frame %s", sig, frame)
             logging.info("Closing server socket")
+            for t in threads:
+                t.join()
             skt.close()
             sys.exit()
     
         signal.signal(signal.SIGINT, signal_handler)
 
-
         while True:
+            threads = [t for t in threads if t.isAlive()]
+
             msg, client_addr = skt.recvfrom(constants.BUFF_SIZE)
 
             request = msg.decode()[0]
@@ -45,7 +50,9 @@ class Server:
 
                 else:
                     logging.info('Upload')
-                    server_upload.upload(full_path, filename, client_addr)
+                    t = Thread(target = server_upload.upload, args = (full_path, filename, client_addr))
+                    t.start()
+                    threads.append(t)
 
             else:
                 if not os.path.exists(full_path):
@@ -55,4 +62,6 @@ class Server:
 
                 else:
                     logging.info('Download')
-                    server_download.download(full_path, filename, client_addr)
+                    t = Thread(target = server_download.download, args = (full_path, filename, client_addr))
+                    t.start()
+                    threads.append(t)

@@ -2,7 +2,7 @@ import logging
 import socket
 import time
 import threading
-from selective_repeat.file_reader import FileReader
+from common.file_reader import FileReader
 from common.constants import ACK, SEC_BASE, MAX_RECV_BYTES, MAX_NACK, MAX_WINDOW, LOG_FORMAT
 
 

@@ -1,5 +1,6 @@
 import logging
 import socket
+from time import sleep
 from common.constants import TIMEOUT
 from common.parser import parse_client_upload_arguments
 from common.sender import Sender
@@ -25,6 +26,7 @@ def main():
     
     new_addr = handshake.client_handshake(msg)
     if new_addr != addr:
+        sleep(10)
         sender = Sender(new_addr, args.src, args.name, client)
         sender.start_sender_stop_and_wait()
     client.close()
