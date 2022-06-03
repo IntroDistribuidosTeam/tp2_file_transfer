@@ -1,8 +1,8 @@
 import socket
 
 from common.constants import TIMEOUT
-from selective_repeat.handshake import Handshake
-from selective_repeat.sender import Sender
+from common.handshake import Handshake
+from common.sender import Sender
 
 
 def download(path, file_name, client_addr: tuple):

@@ -1,7 +1,7 @@
 import logging
 import socket
 
-from selective_repeat.file_writer import FileWriter
+from common.file_writer import FileWriter
 from common.constants import BUFF_SIZE, MAX_NACK, ACK, NOT_EOF, SEC_BASE, ACK_LEN
 
 

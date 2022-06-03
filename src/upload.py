@@ -2,8 +2,8 @@ import logging
 import socket
 from common.constants import TIMEOUT
 from common.parser import parse_client_upload_arguments
-from selective_repeat.sender import Sender
-from selective_repeat.handshake import Handshake
+from common.sender import Sender
+from common.handshake import Handshake
 
 def main():
     args = parse_client_upload_arguments()

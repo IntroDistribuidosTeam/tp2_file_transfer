@@ -1,10 +1,7 @@
-from os import path, stat
 import os
-from common.constants import BUFF_SIZE, FILE_SIZE
+from common.constants import  FILE_SIZE
 
-
-DELIMETER = '/'
-HEADER = 5
+HEADER_SIZE = 5
 class FileReader:
     ''' Class resposible for reading data in file'''
 
@@ -34,7 +31,7 @@ class FileReader:
                 payload = file.read(FILE_SIZE)
                 self.seek = file.tell()
                 eof = 1 if self.seek >= self.file_size else 0
-                length = len(payload) + HEADER
+                length = len(payload) + HEADER_SIZE
                 msg = length.to_bytes(2,'big') + (seq_num + i).to_bytes(2,'big') + eof.to_bytes(1,'big') + payload.encode() 
                 payloads.append(msg)
                 if eof:

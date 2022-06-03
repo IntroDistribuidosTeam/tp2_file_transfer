@@ -1,8 +1,8 @@
 import socket
 
 from common.constants import TIMEOUT
-from selective_repeat.handshake import Handshake
-from selective_repeat.receiver import Receiver
+from common.handshake import Handshake
+from common.receiver import Receiver
 
 
 def upload(path, file_name, client_addr: tuple):
