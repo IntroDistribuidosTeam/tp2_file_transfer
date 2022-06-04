@@ -44,7 +44,7 @@ class Receiver:
             chunk += self.recv_buff[self.recv_base]
             self.recv_buff.pop(self.recv_base, None)
             self.recv_base += 1
-
+            
         self.file_writer.write(chunk)
 
     def is_error(self, sequence_number):
@@ -82,8 +82,8 @@ class Receiver:
         return seq_num, length, eof, payload
         
     def packet_in_window(self,sequence_number):
-        max_possible_packets = self.recv_base + MAX_WINDOW
-        if (self.recv_base + sequence_number) < max_possible_packets:
+        max_possible_packets = self.recv_base + MAX_WINDOW - 1
+        if self.recv_base <= sequence_number and sequence_number <= max_possible_packets:
             return True
         return False
 
@@ -92,7 +92,7 @@ class Receiver:
         '''' Decides if the package has to be stored or wrote '''
         if sequence_number == self.recv_base:
             self.write_file(payload)
-        elif self.packet_in_window(sequence_number) and sequence_number not in (self.recv_buff).keys():
+        elif self.packet_in_window(sequence_number) and (sequence_number not in (self.recv_buff).keys()):
             self.recv_buff[sequence_number] = payload
 
     def start_receiver_selective_repeat(self):
@@ -123,7 +123,7 @@ class Receiver:
         
         logging.info("Finished uploading file {} from client {}".format(self.file_writer.get_filename(), self.sender_addr))
 
-    def start_receiver_stop_and_wait(self):
+def start_receiver_stop_and_wait(self):
         ''' Stop and Wait RTA '''
 
         eof = NOT_EOF
@@ -147,3 +147,5 @@ class Receiver:
                      self.file_writer.get_filename(), self.sender_addr)
 
 
+
+ 
