@@ -4,6 +4,7 @@ import sys
 import socket
 import os.path
 from threading import Thread
+import time
 import server.server_upload as server_upload
 import server.server_download as server_download
 from common import constants
@@ -30,7 +31,7 @@ class Server:
     
         signal.signal(signal.SIGINT, signal_handler)
 
-
+        cont = 0
         while True:
             threads = [t for t in threads if t.isAlive()]
 
@@ -50,6 +51,9 @@ class Server:
                     skt.sendto(msg, client_addr)
 
                 else:
+                    if cont == 0:
+                        time.sleep(6)
+                        cont +=1
                     logging.info('Upload')
                     t = Thread(target = server_upload.upload, args = (full_path, filename, client_addr))
                     t.start()
