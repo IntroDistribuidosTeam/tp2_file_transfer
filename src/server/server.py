@@ -14,6 +14,7 @@ class Server:
     def __init__(self, addr, storage_dir):
         self.addr = addr
         self.storage_dir = storage_dir
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     def start_server(self):
         skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -22,7 +23,7 @@ class Server:
         threads = []
 
         def signal_handler(sig, frame):
-            logging.info("Signal %s in frame %s", sig, frame)
+            logging.info("Signal {} in frame {}".format(sig, frame))
             logging.info("Closing server socket")
             for t in threads:
                 t.join()
@@ -30,15 +31,13 @@ class Server:
             sys.exit()
     
         signal.signal(signal.SIGINT, signal_handler)
-
+        logging.info(' Server listing at address: {} '.format(self.addr))
         while True:
             threads = [t for t in threads if t.is_alive()]
-            print('hilos vivos:', len(threads))
-
+      
             msg, client_addr = skt.recvfrom(constants.BUFF_SIZE)
 
-            print(client_addr)
-
+ 
             request = msg.decode()[0]
             filename = msg.decode()[1:]
 
@@ -47,14 +46,13 @@ class Server:
                 full_path = self.storage_dir + filename
 
             if (request == constants.UPLOAD_CODE):
-                print(msg)
                 if os.path.exists(full_path):
                     logging.error("File %s expected to be uploaded by client %s already exists", filename, client_addr)
                     msg = (4).to_bytes(2, 'big') + (constants.FILE_PROBLEM).to_bytes(2, 'big')
                     skt.sendto(msg, client_addr)
                 else:
 
-                    logging.info('Upload')
+                    logging.info('Upload received.')
                     t = Thread(target = server_upload.upload, args = (full_path, filename, client_addr))
                     t.start()
                     threads.append(t)
@@ -66,7 +64,7 @@ class Server:
                     skt.sendto(msg, client_addr)
 
                 else:
-                    logging.info('Download')
+                    logging.info('Download received.')
                     t = Thread(target = server_download.download, args = (full_path, filename, client_addr))
                     t.start()
                     threads.append(t)

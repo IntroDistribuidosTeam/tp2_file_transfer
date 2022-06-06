@@ -17,7 +17,7 @@ def main():
     addr = (args.server_host, args.server_port)
     
     if args.verbose:
-        log_level = logging.DEBUG
+        log_level = logging.INFO
     else:
         log_level = logging.WARNING
 
@@ -27,24 +27,25 @@ def main():
     if os.path.exists(args.dst):
         logging.error("Destination for file expected to be downloaded already exists.")
         return
+    
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client.settimeout(TIMEOUT)
     handshake = Handshake(client, addr)
-
     msg = make_download_packet(args.name)
+
     if os.path.exists(args.dst):
         logging.error("File dest already exists. Cancelling download.")
     else:
         ack,addr = handshake.client_handshake_dos(msg)
-        logging.info("Handshake successfully finished")
+        
         if int.from_bytes(ack[2:],'big') != NACK:
-            logging.error('Error, try again')
+            logging.error('Handshake fail, try again')
         else:
             receiver = Receiver(addr, args.dst, args.name, client)
             receiver.start_receiver_selective_repeat()
-            logging.info('closing socket')
+            logging.info('Receiver finished, cllosing socket')
     client.close()
-    logging.info('socket closed')
+    logging.info('Socket closed')
 
 
 if __name__ == "__main__":
