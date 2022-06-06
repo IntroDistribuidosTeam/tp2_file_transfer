@@ -110,7 +110,7 @@ class Sender:
         _, seq_num = self.decode_packet(bytes_received)
         
         if seq_num == -1:
-            logging.info('NO nos pudimos conectar correctamente')
+            logging.info('No nos pudimos conectar correctamente')
             return
 
         while not self.file_reader.eof():    

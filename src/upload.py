@@ -1,7 +1,7 @@
 import logging
 import socket
 import os
-from common.constants import ACK, TIMEOUT,UPLOAD_CODE
+from common.constants import ACK, NACK, TIMEOUT,UPLOAD_CODE
 from common.parser import parse_client_upload_arguments
 from common.sender import Sender
 from common.handshake import Handshake
@@ -32,17 +32,17 @@ def main():
     msg = make_upload_package(args.name)
     
     ack,addr = handshake.client_handshake_dos(msg)
-    if int.from_bytes(ack[2:],'big') != ACK:
+    
+    if int.from_bytes(ack[2:],'big') != NACK:
         logging.error('Error, try again')
         client.close()
     else:
-        logging.info('handshake successfull')
         sender = Sender(addr, args.src, args.name, client)
         sender.start_sender_selective_repeat()
         logging.info('closing socket')
     
-    client.close()
-    logging.info('socket closed')
+        client.close()
+        logging.info('socket closed')
 
 if __name__ == "__main__":
     main()

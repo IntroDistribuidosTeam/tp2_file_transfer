@@ -1,6 +1,6 @@
 import socket
-
-from common.constants import TIMEOUT
+import logging
+from common.constants import TIMEOUT,DONWLOAD_CODE
 from common.handshake import Handshake
 from common.sender import Sender
 
@@ -12,9 +12,13 @@ def download(path, file_name, client_addr: tuple):
     udp_socket.settimeout(TIMEOUT)
     udp_socket.bind(('localhost', 0))
     handshake = Handshake(udp_socket, client_addr)
-    handshake.server_handshake()
+    if handshake.server_handshake(DONWLOAD_CODE) > -1:
+        logging.info('hanshake bien hecho')
+        sender = Sender(client_addr, path, file_name, udp_socket)
+        sender.start_sender_selective_repeat()
+    else:
+        logging.info('timeout in socket, closing.')
 
-    sender = Sender(client_addr, path, file_name, udp_socket)
-    sender.start_sender_selective_repeat()
+
 
     udp_socket.close()

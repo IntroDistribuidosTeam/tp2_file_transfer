@@ -22,13 +22,10 @@ class Receiver:
         ''' Returns bytes read from private socket '''
         timeout_counter = 0
         bytes_recv = 0
-
+        print('inicio del receiver')
         while timeout_counter < MAX_NACK and bytes_recv == 0:
             try:
-                bytes_recv, addr = self.socket.recvfrom(BUFF_SIZE)
-                print('addr:',addr)
-                return bytes_recv
-
+                bytes_recv, _ = self.socket.recvfrom(BUFF_SIZE)
             except socket.timeout as _:
                 logging.info("TIMEOUT")
                 timeout_counter += 1
@@ -109,10 +106,8 @@ class Receiver:
 
             if self.is_error(sequence_number):
                 logging.error("ELIMINANDO EL ARCHIVO")
-                self.file_writer.remove_path()
+                #self.file_writer.remove_path()
                 error = True
-                self.socket.close
-                
                 break
             elif len(bytes_received) == length:
                 

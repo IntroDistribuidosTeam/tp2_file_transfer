@@ -1,7 +1,8 @@
+from audioop import add
 import logging
 import socket
 import os
-from common.constants import TIMEOUT,DONWLOAD_CODE,LOG_FORMAT
+from common.constants import NACK, TIMEOUT,DONWLOAD_CODE,LOG_FORMAT
 from common.parser import parse_client_download_arguments
 from common.receiver import Receiver
 from common.handshake import Handshake
@@ -34,12 +35,16 @@ def main():
     if os.path.exists(args.dst):
         logging.error("File dest already exists. Cancelling download.")
     else:
-        new_addr = handshake.client_handshake(msg)
+        ack,addr = handshake.client_handshake_dos(msg)
         logging.info("Handshake successfully finished")
-        if new_addr != addr:
-            receiver = Receiver(new_addr, args.dst, args.name, client)
+        if int.from_bytes(ack[2:],'big') != NACK:
+            logging.error('Error, try again')
+        else:
+            receiver = Receiver(addr, args.dst, args.name, client)
             receiver.start_receiver_selective_repeat()
+            logging.info('closing socket')
     client.close()
+    logging.info('socket closed')
 
 
 if __name__ == "__main__":

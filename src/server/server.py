@@ -31,11 +31,13 @@ class Server:
     
         signal.signal(signal.SIGINT, signal_handler)
 
-        cont = 0
         while True:
-            threads = [t for t in threads if t.isAlive()]
+            threads = [t for t in threads if t.is_alive()]
+            print('hilos vivos:', len(threads))
 
             msg, client_addr = skt.recvfrom(constants.BUFF_SIZE)
+
+            print(client_addr)
 
             request = msg.decode()[0]
             filename = msg.decode()[1:]
@@ -45,21 +47,19 @@ class Server:
                 full_path = self.storage_dir + filename
 
             if (request == constants.UPLOAD_CODE):
+                print(msg)
                 if os.path.exists(full_path):
                     logging.error("File %s expected to be uploaded by client %s already exists", filename, client_addr)
                     msg = (4).to_bytes(2, 'big') + (constants.FILE_PROBLEM).to_bytes(2, 'big')
                     skt.sendto(msg, client_addr)
-
                 else:
-                    if cont == 0:
-                        time.sleep(6)
-                        cont +=1
+
                     logging.info('Upload')
                     t = Thread(target = server_upload.upload, args = (full_path, filename, client_addr))
                     t.start()
                     threads.append(t)
 
-            else:
+            elif request == constants.DONWLOAD_CODE:
                 if not os.path.exists(full_path):
                     logging.error("File %s expected to be downloaded by client %s does no exist", filename, client_addr)
                     msg = (constants.ACK_LEN).to_bytes(2, 'big') + (constants.FILE_PROBLEM).to_bytes(2, 'big')

@@ -1,6 +1,6 @@
 import socket
 import logging
-from common.constants import ACK_LEN, MAX_NACK, MAX_RECV_BYTES, ACK, FILE_PROBLEM, NACK
+from common.constants import ACK_LEN, BUFF_SIZE, MAX_NACK, MAX_RECV_BYTES, ACK, FILE_PROBLEM, NACK, TIMEOUT
 
 # inicia la comunicacion
 class Handshake:
@@ -53,35 +53,41 @@ class Handshake:
         attemps = 0
         while attemps < MAX_NACK:
             self.socket.sendto(msg, self.socket_addr)
+            logging.info('envio peticion')
             try:
                 data, address = self.socket.recvfrom(MAX_RECV_BYTES)
                 attemps = MAX_NACK
             except socket.timeout as _:
                 logging.info('timeout por handshake')
                 attemps +=1
-                data = (ACK_LEN).to_bytes(2,'big') + (NACK).to_bytes(2,'big')
+                data = (ACK_LEN).to_bytes(2,'big') + (ACK).to_bytes(2,'big')
         
         if int.from_bytes(data[2:],'big') != ACK:
-            return data, self.socket_addr
+            logging.info('llego un 0 por parte del nuevo hilo')
+            self.socket.sendto(msg, address)
+            return data, address
 
-        #msg = (2).to_bytes(2,'big') + 'C'.encode()
-        #self.socket.sendto(msg, address)
         return data,address
         
 
-    def server_handshake(self):
+    def server_handshake(self,mode):
         ''' Server handshake side'''
         logging.info("New socket listing at: %s" ,self.socket.getsockname())
 
-        ack_package = (ACK_LEN).to_bytes(2, 'big') + ACK.to_bytes(2, 'big')
-        res = self.socket.sendto(ack_package, self.socket_addr)
+        ack_package = (ACK_LEN).to_bytes(2, 'big') + NACK.to_bytes(2, 'big')
+        _ = self.socket.sendto(ack_package, self.socket_addr)
 
+        attemps = 0
+        while attemps < MAX_NACK:
+            try:
+                data, _ = self.socket.recvfrom(BUFF_SIZE)
+                print(data)
+                if data.decode()[0] == mode:
+                    logging.info('llego el mensaje deseado')
+                    return 0
+                else:
+                    attemps +=1
+            except socket.timeout as _:
+                attemps +=1
         
-       # attemps = 0
-       # while attemps < MAX_NACK:
-       #     try:
-       #         data, address = self.socket.recvfrom(MAX_RECV_BYTES)
-       #         attemps = MAX_NACK
-       #     except socket.timeout as _:
-       #         attemps +=1
-       #         data = (ACK_LEN).to_bytes(2,'big') + (NACK).to_bytes(2,'big')
+        return -1
