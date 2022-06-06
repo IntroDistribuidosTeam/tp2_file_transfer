@@ -30,7 +30,8 @@ class Handshake:
         
         if int.from_bytes(data[2:],'big') == SYN:
             logging.info('SYN received from server socket')
-            self.socket.sendto(msg, address)
+            ack_package = (ACK_LEN).to_bytes(2, 'big') + SYN.to_bytes(2, 'big')
+            self.socket.sendto(ack_package, address)
             return data, address
 
         return data,address
@@ -49,7 +50,7 @@ class Handshake:
                 logging.info('Socket waiting for syn ack')
                 data, _ = self.socket.recvfrom(BUFF_SIZE)
  
-                if data.decode()[0] == mode:
+                if int.from_bytes(data[2:4],'big') == SYN and len(data) == ACK_LEN:
                     logging.info('Received expected mode code')
                     return 0
                 else:

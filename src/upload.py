@@ -1,7 +1,7 @@
 import logging
 import socket
 import os
-from common.constants import ACK, NACK, TIMEOUT,UPLOAD_CODE
+from common.constants import ACK, NACK, TIMEOUT,UPLOAD_CODE,LOG_FORMAT
 from common.parser import parse_client_upload_arguments
 from common.sender import Sender
 from common.handshake import Handshake
@@ -15,11 +15,11 @@ def main():
 
     addr = (args.server_host, args.server_port)
     if args.verbose:
-        log_level = logging.DEBUG
+        log_level = logging.INFO
     else:
         log_level = logging.WARNING
 
-    logging.basicConfig(level=log_level, format="%(message)s")
+    logging.basicConfig(level=log_level, format=LOG_FORMAT)
 
     if not os.path.exists(args.src):
         logging.error("File expected to be uploaded does not exist.")

@@ -49,11 +49,15 @@ class Sender:
     
     def repeat(self, socket_udp: socket, addr, packet):
         ''' Re send package if ACK has not been recieved yet'''
- 
+
         thread = threading.currentThread()
         while getattr(thread, "do_run", True):
-            _ = socket_udp.sendto(packet, addr)
-            time.sleep(WINDOW_TIMEOUT)
+            try:
+                _ = socket_udp.sendto(packet, addr)
+                time.sleep(WINDOW_TIMEOUT)
+            except OSError as _:
+                thread.do_run = False
+            
 
     def decode_packet(self,data):
         ''' Decode data in bytes to correct fields '''
