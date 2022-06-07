@@ -2,10 +2,8 @@ import logging
 import socket
 
 from common.file_writer import FileWriter
-from common.constants import BUFF_SIZE, EOF, ATTEMPS, MAX_WINDOW, NOT_EOF, SEC_BASE, ACK_LEN,LOG_FORMAT
+from common.constants import BUFF_SIZE, EOF, ATTEMPS, MAX_WINDOW, NOT_EOF, SEC_BASE, ACK_LEN,LOG_FORMAT, SEQUENCE_NUMBER_BYTES
 
-
-SEQUENCE_NUMBER_BYTES = 2
 
 class Receiver:
 

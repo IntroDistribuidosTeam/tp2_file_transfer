@@ -5,10 +5,7 @@ import threading
 
 
 from common.file_reader import FileReader
-from common.constants import SEC_BASE, MAX_RECV_BYTES, MAX_NACK, MAX_WINDOW, LOG_FORMAT,SYN,EOF
-
-ERROR = -1
-WINDOW_TIMEOUT = 0.5
+from common.constants import SEC_BASE, MAX_RECV_BYTES, MAX_NACK, MAX_WINDOW, LOG_FORMAT,SYN,EOF, ERROR, WINDOW_TIMEOUT
 
 class Sender:
 

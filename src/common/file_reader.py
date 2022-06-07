@@ -1,7 +1,6 @@
 import os
-from common.constants import  FILE_SIZE
+from common.constants import  FILE_SIZE, HEADER_SIZE
 
-HEADER_SIZE = 5
 class FileReader:
     ''' Class resposible for reading data in file'''
 

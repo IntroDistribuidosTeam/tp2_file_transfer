@@ -1,8 +1,5 @@
 from socket import *
-
-SIZE = 1024
-IP = '127.0.0.1'
-PORT = 11000
+from common.constants import SIZE,IP,PORT
 
 def main():
     skt = socket(AF_INET, SOCK_DGRAM)
